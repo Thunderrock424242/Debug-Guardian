@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.0.0"
+version = "1.0.1"
 group = mod_group_id
 
 repositories {
@@ -147,7 +147,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : mod_version,
+            mod_version            : "1.0.1",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]

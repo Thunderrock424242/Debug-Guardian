@@ -17,12 +17,9 @@ import java.util.*;
 
 public class LiveLogMonitor {
     private static final Path outputLog = FMLPaths.GAMEDIR.get().resolve("logs/runtime_issues.log");
-    private static final String reportLink = "https://github.com/YourModpack/issues"; // Replace with your support link
+    private static final String reportLink = "https://github.com/YourModpack/issues";
 
-    // Prevents chat spam by tracking reported error lines
     private static final Set<String> sessionReportedErrors = new HashSet<>();
-
-    // Error type -> custom message
     private static final Map<String, String> errorMessages = new LinkedHashMap<>() {{
         put("Mixin apply failed", "A mod failed to apply a Mixin. This could cause crashes or broken features.");
         put("ClassNotFoundException", "A required class is missing. This usually means a dependency is missing or outdated.");
@@ -33,9 +30,19 @@ public class LiveLogMonitor {
     }};
 
     public static void start() {
+        resetLog(); // ✅ Reset on launch
         LoggerContext context = (LoggerContext) LogManager.getContext(false);
         Logger coreLogger = context.getRootLogger();
         coreLogger.addAppender(new IssueCatchingAppender("LiveLogMonitor"));
+    }
+
+    private static void resetLog() {
+        try {
+            Files.createDirectories(outputLog.getParent());
+            Files.writeString(outputLog, "", StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("[Debug Guardian] Could not reset runtime log: " + e.getMessage());
+        }
     }
 
     public static class IssueCatchingAppender extends AbstractAppender {
@@ -48,15 +55,25 @@ public class LiveLogMonitor {
         public void append(LogEvent event) {
             String message = event.getMessage().getFormattedMessage();
 
+            boolean matchedKnownError = false;
+
             for (Map.Entry<String, String> entry : errorMessages.entrySet()) {
-                String errorKeyword = entry.getKey();
+                String keyword = entry.getKey();
                 String customMessage = entry.getValue();
 
-                if (message.contains(errorKeyword) && sessionReportedErrors.add(errorKeyword)) {
-                    writeToLog(message);
-                    sendToChat(message, customMessage);
+                if (message.contains(keyword)) {
+                    matchedKnownError = true;
+                    if (sessionReportedErrors.add(keyword)) {
+                        writeToLog("[" + keyword + "] " + message);
+                        sendToChat(message, customMessage);
+                    }
                     break;
                 }
+            }
+
+            // ✅ Even if it's not a known error, still log general ERRORs or FATALs
+            if (!matchedKnownError && (event.getLevel().isMoreSpecificThan(org.apache.logging.log4j.Level.ERROR))) {
+                writeToLog("[UNCLASSIFIED] " + message);
             }
         }
 
@@ -66,7 +83,7 @@ public class LiveLogMonitor {
                         "[" + Instant.now() + "] " + message + "\n",
                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("[Debug Guardian] Failed to write runtime issue: " + e.getMessage());
             }
         }
 
@@ -75,7 +92,7 @@ public class LiveLogMonitor {
             if (mc.level == null || mc.player == null) return;
 
             mc.execute(() -> {
-                mc.player.sendSystemMessage(Component.literal("§c[NovaAPI Warning] A potential error was detected:"));
+                mc.player.sendSystemMessage(Component.literal("§c[Debug Guardian] A potential error was detected:"));
                 mc.player.sendSystemMessage(Component.literal("§7" + logLine));
                 mc.player.sendSystemMessage(Component.literal("§6" + warningMessage));
                 mc.player.sendSystemMessage(Component.literal("§9[Click here to report the issue]")
@@ -97,13 +114,13 @@ public class LiveLogMonitor {
                     "[" + Instant.now() + "] " + message + "\n",
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("[Debug Guardian] Failed to write throwable: " + e.getMessage());
         }
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null) {
             mc.execute(() -> {
-                mc.player.sendSystemMessage(Component.literal("§c[NovaAPI Warning] A fatal error occurred:"));
+                mc.player.sendSystemMessage(Component.literal("§c[Debug Guardian] A fatal error occurred:"));
                 mc.player.sendSystemMessage(Component.literal("§7" + thrown.getClass().getSimpleName() + ": " + thrown.getMessage()));
                 mc.player.sendSystemMessage(Component.literal("§ePlease report it to the modpack developer."));
                 mc.player.sendSystemMessage(Component.literal("§9[Click here to report the issue]")

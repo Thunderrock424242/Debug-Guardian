@@ -2,6 +2,7 @@ package com.thunder.debugguardian;
 
 import com.thunder.debugguardian.debug.CrashHelper.CrashHandler;
 import com.thunder.debugguardian.debug.CrashHelper.LiveLogMonitor;
+import com.thunder.debugguardian.debug.Watchdog;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -56,6 +57,7 @@ public class DebugGuardian {
 
         CrashHandler.register();
         LiveLogMonitor.start();
+        Watchdog.start();
 
 
     }
