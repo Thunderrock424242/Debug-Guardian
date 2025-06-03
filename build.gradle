@@ -13,11 +13,12 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.0.2"
+version = "1.0.3"
 group = "com.thunder.debugguardian"
 
 repositories {
     mavenLocal()
+    mavenCentral()
 }
 
 base {
@@ -147,7 +148,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : "1.0.2",
+            mod_version            : "1.0.3",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]
@@ -169,7 +170,7 @@ publishing {
             from components.java
             groupId = "com.thunder"
             artifactId = "debugguardian"
-            version = "1.0.2"
+            version = "1.0.3"
         }
     }
 
