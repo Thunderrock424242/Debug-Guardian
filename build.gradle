@@ -165,11 +165,11 @@ neoForge.ideSyncTask generateModMetadata
 // Example configuration to allow publishing using the maven-publish plugin
 publishing {
     publications {
-        mavenJava(MavenPublication) {
+        create("mavenJava", MavenPublication) {
             from components.java
-            groupId = 'com.thunder.debugguardian' as Publication      // Choose your namespace
-            artifactId = 'debugguardian' as Publication
-            version = '1.0.2' as Publication                       // Adjust for each release
+            groupId = "com.thunder.debugguardian"
+            artifactId = "debugguardian"
+            version = "1.0.2"
         }
     }
 
@@ -184,6 +184,7 @@ publishing {
         }
     }
 }
+
 
 
 tasks.withType(JavaCompile).configureEach {
