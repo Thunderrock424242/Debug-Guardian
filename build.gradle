@@ -167,7 +167,7 @@ publishing {
     publications {
         create("mavenJava", MavenPublication) {
             from components.java
-            groupId = "com.thunder.debugguardian"
+            groupId = "com.thunder"
             artifactId = "debugguardian"
             version = "1.0.2"
         }
