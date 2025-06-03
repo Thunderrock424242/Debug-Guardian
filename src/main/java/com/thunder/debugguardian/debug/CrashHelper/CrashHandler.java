@@ -60,7 +60,7 @@ public class CrashHandler {
             // Get list of all mods
             List<IModInfo> mods = ModList.get().getMods();
             for (IModInfo mod : mods) {
-                if (mod.getOwningFile().getFile().getFileName().toString().contains(className)) {
+                if (mod.getOwningFile().getFile().getFileName().contains(className)) {
                     return mod.getModId() + " (" + mod.getVersion() + ")";
                 }
             }
