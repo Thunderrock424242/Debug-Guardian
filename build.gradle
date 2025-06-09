@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.0.4"
+version = "1.1.0"
 group = "com.thunder.debugguardian"
 
 repositories {
@@ -148,7 +148,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : "1.0.4",
+            mod_version            : "1.1.0",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]
