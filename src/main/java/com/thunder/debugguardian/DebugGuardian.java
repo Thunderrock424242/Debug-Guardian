@@ -1,5 +1,6 @@
 package com.thunder.debugguardian;
 
+import com.thunder.debugguardian.config.DebugGuardianConfig;
 import com.thunder.debugguardian.debug.CrashHelper.CrashHandler;
 import com.thunder.debugguardian.debug.CrashHelper.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
@@ -10,6 +11,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -54,6 +56,11 @@ public class DebugGuardian {
 
         // Register global events
         NeoForge.EVENT_BUS.register(this);
+
+        container.registerConfig(
+                ModConfig.Type.COMMON,
+                DebugGuardianConfig.SPEC
+        );
 
         CrashHandler.register();
         LiveLogMonitor.start();
