@@ -1,6 +1,6 @@
 package com.thunder.debugguardian.mixin;
 
-import com.thunder.debugguardian.debug.CrashHelper.LiveLogMonitor;
+import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

@@ -1,8 +1,7 @@
 package com.thunder.debugguardian;
 
-import com.thunder.debugguardian.config.DebugGuardianConfig;
-import com.thunder.debugguardian.debug.CrashHelper.CrashHandler;
-import com.thunder.debugguardian.debug.CrashHelper.LiveLogMonitor;
+import com.thunder.debugguardian.config.DebugConfig;
+import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -59,10 +58,9 @@ public class DebugGuardian {
 
         container.registerConfig(
                 ModConfig.Type.COMMON,
-                DebugGuardianConfig.SPEC
+                DebugConfig.SPEC
         );
 
-        CrashHandler.register();
         LiveLogMonitor.start();
         Watchdog.start();
 
