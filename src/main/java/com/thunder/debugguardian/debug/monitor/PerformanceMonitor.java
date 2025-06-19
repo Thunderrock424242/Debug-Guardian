@@ -23,8 +23,8 @@ public class PerformanceMonitor {
     private static final PerformanceMonitor INSTANCE = new PerformanceMonitor();
     private final Deque<Long> tickTimes = new ArrayDeque<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final long tickThreshold = DebugConfig.get().performance.tickThresholdMs;
-    private final double memoryWarnRatio = DebugConfig.get().performance.memoryWarningRatio;
+    private final long tickThreshold = DebugConfig.get().performanceTickThresholdMs;
+    private final double memoryWarnRatio = DebugConfig.get().performanceMemoryWarningRatio;
 
     private PerformanceMonitor() {
         MemoryMXBean mem = ManagementFactory.getMemoryMXBean();

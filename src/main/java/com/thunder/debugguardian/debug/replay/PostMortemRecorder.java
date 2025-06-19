@@ -24,7 +24,7 @@ public class PostMortemRecorder {
     private static final PostMortemRecorder INSTANCE = new PostMortemRecorder();
 
     private PostMortemRecorder() {
-        this.capacity = DebugConfig.get().postmortem.bufferSize;
+        this.capacity = DebugConfig.get().postmortemBufferSize;
         this.buffer = new ConcurrentLinkedDeque<>();
     }
 
