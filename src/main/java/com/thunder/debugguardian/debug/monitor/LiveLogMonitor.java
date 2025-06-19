@@ -2,10 +2,11 @@ package com.thunder.debugguardian.debug.monitor;
 
 import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
-import com.thunder.debugguardian.debug.report.CrashReportHandler;
+import com.thunder.debugguardian.debug.errors.ErrorTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ClickEvent;
+import net.neoforged.fml.loading.FMLPaths;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -20,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LiveLogMonitor {
-    private static final Path RUNTIME_LOG = DebugGuardian.GAME_DIR.resolve("logs/runtime_issues.log");
+    private static final Path RUNTIME_LOG = FMLPaths.GAMEDIR.get().resolve("logs/runtime_issues.log");
     private static final Set<String> seenErrors = ConcurrentHashMap.newKeySet();
     private static final Map<String, String> errorClassifications = new LinkedHashMap<>();
 
@@ -54,7 +55,7 @@ public class LiveLogMonitor {
 
     private static class LiveAppender extends AbstractAppender {
         protected LiveAppender(String name) {
-            super(name, ErrorTracker.getFilter(), PatternLayout.newBuilder().withPattern("%m").build(), false);
+            super(name, new ErrorTracker(), PatternLayout.newBuilder().withPattern("%m").build(), false);
             start();
         }
 
@@ -71,7 +72,7 @@ public class LiveLogMonitor {
 
             if (classification != null) {
                 write(RUNTIME_LOG, "[" + Instant.now() + "] " + message);
-                notifyPlayer(message, classification, CrashReportHandler.createIssueUrl(null));
+                notifyPlayer(message, classification, buildReportUrl());
             } else if (event.getLevel().isMoreSpecificThan(org.apache.logging.log4j.Level.ERROR)) {
                 write(RUNTIME_LOG, "[UNCLASSIFIED] [" + Instant.now() + "] " + message);
             }
@@ -89,18 +90,22 @@ public class LiveLogMonitor {
     private static void notifyPlayer(String logLine, String advice, String reportUrl) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-
         mc.execute(() -> {
             mc.player.sendSystemMessage(Component.literal("§c[Debug Guardian] Detected: " + logLine));
             mc.player.sendSystemMessage(Component.literal("§6" + advice));
-            mc.player.sendSystemMessage(Component.literal("§9[Report issue]")
-                    .withStyle(style -> style
-                            .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, reportUrl))
-                            .withUnderlined(true)
-                    )
+            mc.player.sendSystemMessage(
+                    Component.literal("§9[Report issue]")
+                            .withStyle(style -> style
+                                    .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, reportUrl))
+                                    .withUnderlined(true)
+                            )
             );
         });
     }
+
+    /**
+     * Capture any uncaught Throwable globally, write to log and notify player.
+     */
     public static void captureThrowable(Throwable thrown) {
         StringBuilder sb = new StringBuilder(thrown.toString()).append("\n");
         for (StackTraceElement el : thrown.getStackTrace()) {
