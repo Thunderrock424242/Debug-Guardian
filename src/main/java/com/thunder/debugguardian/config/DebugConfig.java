@@ -42,6 +42,7 @@ public class DebugConfig {
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 
+
     private static DebugConfig instance;
     public final int postmortemBufferSize;
     public final String reportingGithubRepository;

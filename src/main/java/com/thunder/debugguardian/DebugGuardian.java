@@ -3,6 +3,7 @@ package com.thunder.debugguardian;
 import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
+import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -56,18 +57,16 @@ public class DebugGuardian {
         // Register global events
         NeoForge.EVENT_BUS.register(this);
 
-        container.registerConfig(
-                ModConfig.Type.COMMON,
-                DebugConfig.SPEC
-        );
+        container.registerConfig(ModConfig.Type.COMMON, DebugConfig.SPEC);
 
-        LiveLogMonitor.start();
         Watchdog.start();
 
 
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        LiveLogMonitor.start();
+        PerformanceMonitor.get();
 
     }
 

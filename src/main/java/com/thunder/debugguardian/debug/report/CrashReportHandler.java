@@ -5,7 +5,6 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 
-import java.awt.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
@@ -13,32 +12,36 @@ import java.util.stream.Collectors;
 public class CrashReportHandler {
 
     public static String createIssueUrl(CrashInfo info) {
-        String repo = DebugConfig.get().reporting.githubRepository;
+        String repo = DebugConfig.get().reportingGithubRepository;
+
+        // Now info.mods is List<ModInfo>, so .getId() and .getVersion() exist
+        String modsList = info.mods.stream()
+                .map(mod -> mod.getId() + "@" + mod.getVersion())
+                .collect(Collectors.joining(", "));
+
         String body = new StringBuilder()
-                .append("Mods: ")
-                .append(info.mods.stream().map(m -> m.id + "@" + m.version).collect(Collectors.joining(", ")))
-                .append("\nJava: ")
-                .append(info.javaVersion)
-                .append("\nArgs: ")
-                .append(String.join(" ", info.javaArgs))
-                .append("\nFingerprint: ")
-                .append(info.fingerprint)
+                .append("Mods: ").append(modsList)
+                .append("\nJava: ").append(info.javaVersion)
+                .append("\nArgs: ").append(String.join(" ", info.javaArgs))
+                .append("\nFingerprint: ").append(info.fingerprint)
                 .append("\nStackTop:\n```")
-                .append(info.stackTop)
+                .append(info.stackTop.replace("```", "\\`\\`\\`"))  // escape any grave accents
                 .append("```")
                 .toString();
 
-        String url = String.format(
+        return String.format(
                 "https://github.com/%s/issues/new?body=%s",
                 repo,
                 URLEncoder.encode(body, StandardCharsets.UTF_8)
         );
-        return url;
     }
 
     public static Component buildChatLink(CrashInfo info) {
         String url = createIssueUrl(info);
-        return new TextComponent("[Report Crash]")
-                .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url)));
+        return Component.literal("[Report Crash]")
+                .withStyle(Style.EMPTY
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
+                        .withUnderlined(true)
+                );
     }
 }
