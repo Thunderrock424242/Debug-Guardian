@@ -27,6 +27,9 @@ public class PerformanceMonitor {
     private final Deque<Long> tickTimes = new ArrayDeque<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private Instant last = Instant.now();
+    // tracks consecutive slow ticks
+    private int slowTickCount = 0;
+    private static final int SLOW_TICK_WARN_INTERVAL = 10;
 
     private PerformanceMonitor() {
         // Schedule memory checks
@@ -65,14 +68,39 @@ public class PerformanceMonitor {
         }
     }
 
+    /**
+     * Records tick durations and warns on concerning ticks.
+     */
     private void recordTick() {
+        // Measure tick duration
         Instant now = Instant.now();
         long ms = Duration.between(last, now).toMillis();
         last = now;
+
+        // Maintain a rolling window of the last 100 ticks
         tickTimes.addLast(ms);
-        if (tickTimes.size() > 100) tickTimes.removeFirst();
-        if (ms > DebugConfig.get().performanceTickThresholdMs) {
-            DebugGuardian.LOGGER.warn("Slow tick detected: " + ms + "ms");
+        if (tickTimes.size() > 100) {
+            tickTimes.removeFirst();
+        }
+
+        // Only warn on ticks exceeding 100ms
+        if (ms > 100) {
+            slowTickCount++;
+            if (slowTickCount == 1) {
+                DebugGuardian.LOGGER.warn(
+                        "Concerning slow tick detected: {} ms", ms
+                );
+            } else if (slowTickCount % SLOW_TICK_WARN_INTERVAL == 0) {
+                DebugGuardian.LOGGER.warn(
+                        "Still slow for {} consecutive ticks; last tick {} ms", slowTickCount, ms
+                );
+            }
+        } else if (slowTickCount > 0) {
+            DebugGuardian.LOGGER.info(
+                    "Recovered after {} slow ticks; last tick {} ms", slowTickCount, ms
+            );
+            slowTickCount = 0;
         }
     }
 }
+
