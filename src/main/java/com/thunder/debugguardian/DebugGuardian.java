@@ -4,6 +4,7 @@ import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
+import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -66,7 +67,8 @@ public class DebugGuardian {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LiveLogMonitor.start();
-        PerformanceMonitor.get();
+        PerformanceMonitor.init();
+        PostMortemRecorder.init();
 
     }
 

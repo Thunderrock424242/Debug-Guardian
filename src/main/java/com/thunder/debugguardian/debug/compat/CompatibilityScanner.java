@@ -16,7 +16,7 @@ import java.nio.file.Path;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
-@EventBusSubscriber(modid = MOD_ID)
+@EventBusSubscriber(modid = MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public class CompatibilityScanner {
     @SubscribeEvent
     public static void onFMLLoad(FMLLoadCompleteEvent evt) {

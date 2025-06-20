@@ -15,17 +15,17 @@ public class CrashReportHandler {
         String repo = DebugConfig.get().reportingGithubRepository;
 
         // Now info.mods is List<ModInfo>, so .getId() and .getVersion() exist
-        String modsList = info.mods.stream()
-                .map(mod -> mod.getId() + "@" + mod.getVersion())
+        String modsList = info.mods().stream()
+                .map(mod -> mod.id() + "@" + mod.version())
                 .collect(Collectors.joining(", "));
 
         String body = new StringBuilder()
                 .append("Mods: ").append(modsList)
-                .append("\nJava: ").append(info.javaVersion)
-                .append("\nArgs: ").append(String.join(" ", info.javaArgs))
-                .append("\nFingerprint: ").append(info.fingerprint)
+                .append("\nJava: ").append(info.javaVersion())
+                .append("\nArgs: ").append(String.join(" ", info.javaArgs()))
+                .append("\nFingerprint: ").append(info.fingerprint())
                 .append("\nStackTop:\n```")
-                .append(info.stackTop.replace("```", "\\`\\`\\`"))  // escape any grave accents
+                .append(info.stackTop().replace("```", "\\`\\`\\`"))  // escape any grave accents
                 .append("```")
                 .toString();
 

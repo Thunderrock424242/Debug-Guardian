@@ -18,37 +18,52 @@ import java.util.concurrent.TimeUnit;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
+/**
+ * Monitors tick durations and memory usage after config has loaded.
+ */
 @EventBusSubscriber(modid = MOD_ID)
 public class PerformanceMonitor {
-    private static final PerformanceMonitor INSTANCE = new PerformanceMonitor();
+    private static PerformanceMonitor instance;
     private final Deque<Long> tickTimes = new ArrayDeque<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final long tickThreshold = DebugConfig.get().performanceTickThresholdMs;
-    private final double memoryWarnRatio = DebugConfig.get().performanceMemoryWarningRatio;
+    private Instant last = Instant.now();
 
     private PerformanceMonitor() {
-        MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
-        scheduler.scheduleAtFixedRate(() -> {
-            double used = mem.getHeapMemoryUsage().getUsed();
-            double max = mem.getHeapMemoryUsage().getMax();
-            if (used / max > memoryWarnRatio) {
-                DebugGuardian.LOGGER.warn("Memory usage high: " + (used/max*100) + "%");
-            }
-        }, 10, 10, TimeUnit.SECONDS);
+        // Schedule memory checks
+        scheduler.scheduleAtFixedRate(this::checkMemory, 10, 10, TimeUnit.SECONDS);
     }
 
+    /**
+     * Initialize the PerformanceMonitor once config is ready
+     */
+    public static void init() {
+        if (instance == null) {
+            instance = new PerformanceMonitor();
+        }
+    }
+
+    /**
+     * Retrieve the singleton (after init)
+     */
     public static PerformanceMonitor get() {
-        return INSTANCE;
+        return instance;
+    }
+
+    private void checkMemory() {
+        MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
+        double used = mem.getHeapMemoryUsage().getUsed();
+        double max = mem.getHeapMemoryUsage().getMax();
+        if (used / max > DebugConfig.get().performanceMemoryWarningRatio) {
+            DebugGuardian.LOGGER.warn("Memory usage high: " + (used / max * 100) + "%");
+        }
     }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post evt) {
-         {
-            PerformanceMonitor.get().recordTick();
+        if (instance != null) {
+            instance.recordTick();
         }
     }
-
-    private Instant last = Instant.now();
 
     private void recordTick() {
         Instant now = Instant.now();
@@ -56,7 +71,7 @@ public class PerformanceMonitor {
         last = now;
         tickTimes.addLast(ms);
         if (tickTimes.size() > 100) tickTimes.removeFirst();
-        if (ms > tickThreshold) {
+        if (ms > DebugConfig.get().performanceTickThresholdMs) {
             DebugGuardian.LOGGER.warn("Slow tick detected: " + ms + "ms");
         }
     }

@@ -1,11 +1,10 @@
 package com.thunder.debugguardian.debug.replay;
 
 import com.google.gson.Gson;
-import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import com.thunder.debugguardian.DebugGuardian;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.io.IOException;
@@ -14,24 +13,38 @@ import java.nio.file.Path;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
-
-@EventBusSubscriber(modid = MOD_ID)
+/**
+ * Captures recent game events for a post-mortem dump upon a crash.
+ */
 public class PostMortemRecorder {
-    private static final int DEFAULT_SIZE = 500;
-    private final Deque<GameEvent> buffer;
-    private final int capacity;
-    private static final PostMortemRecorder INSTANCE = new PostMortemRecorder();
+    private static PostMortemRecorder instance;
+    private Deque<GameEvent> buffer;
+    private int capacity;
 
     private PostMortemRecorder() {
-        this.capacity = DebugConfig.get().postmortemBufferSize;
-        this.buffer = new ConcurrentLinkedDeque<>();
+        // no-op; actual init in init()
     }
 
+    /**
+     * Initialize the recorder after config has loaded.
+     */
+    public static void init() {
+        if (instance == null) {
+            instance = new PostMortemRecorder();
+            instance.capacity = DebugConfig.get().postmortemBufferSize;
+            instance.buffer = new ConcurrentLinkedDeque<>();
+        }
+    }
+
+    /**
+     * Retrieve the singleton, initializing if needed.
+     */
     public static PostMortemRecorder get() {
-        return INSTANCE;
+        if (instance == null) init();
+        return instance;
     }
 
+    /** Record a single game event onto the buffer. */
     public void record(GameEvent event) {
         buffer.addLast(event);
         if (buffer.size() > capacity) buffer.removeFirst();
@@ -39,14 +52,17 @@ public class PostMortemRecorder {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post evt) {
-        get().record(new GameEvent(GameEvent.EventType.TICK,"ServerPost"));
+        get().record(new GameEvent(GameEvent.EventType.TICK, "ClientPost"));
     }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post evt) {
-        get().record(new GameEvent(GameEvent.EventType.TICK,"ServerPost"));
+        get().record(new GameEvent(GameEvent.EventType.TICK, "ServerPost"));
     }
 
+    /**
+     * Dump the current buffer to a JSON file in the crash directory.
+     */
     public void dump(Path crashDir) {
         try {
             Files.createDirectories(crashDir);
