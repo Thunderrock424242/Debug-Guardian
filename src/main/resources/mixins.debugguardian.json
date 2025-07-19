@@ -4,14 +4,11 @@
   "package": "com.thunder.debugguardian.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "mixins.debugguardian.refmap.json",
-  "mixins": [
-    "CrashReportMixin"
-  ],
+  "mixins": [],
   "injectors": {
     "defaultRequire": 1
   },
   "client": [
-    "GlobalExceptionMixin",
-    "MinecraftMixin"
+    "GlobalExceptionMixin"
   ]
 }

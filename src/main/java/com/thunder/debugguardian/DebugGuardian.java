@@ -45,13 +45,13 @@ public class DebugGuardian {
     }
 
     /**
-     * Instantiates a new Wilderness odyssey api main mod class.
+     * Create the Debug Guardian mod instance.
      *
      * @param modEventBus the mod event bus
      * @param container   the container
      */
     public DebugGuardian(IEventBus modEventBus, ModContainer container) {
-        LOGGER.info("WildernessOdysseyAPI initialized. I will also start to track mod conflicts");
+        LOGGER.info("DebugGuardian initialized; starting monitors");
         // Register mod setup and creative tabs
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::addCreative);
