@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
-@EventBusSubscriber(modid = MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = MOD_ID)
 public class DebugConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
