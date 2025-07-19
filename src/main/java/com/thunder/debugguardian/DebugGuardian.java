@@ -5,6 +5,7 @@ import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
+import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -78,7 +79,7 @@ public class DebugGuardian {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-
+        UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
     }
 }
 
