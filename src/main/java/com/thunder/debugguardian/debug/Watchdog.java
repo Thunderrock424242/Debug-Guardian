@@ -7,6 +7,8 @@ import java.lang.management.ThreadMXBean;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.thunder.debugguardian.DebugGuardian.LOGGER;
+
 public class Watchdog {
 
     private static final int MAX_THREADS = 300;
@@ -22,11 +24,11 @@ public class Watchdog {
             int threadCount = threadBean.getThreadCount();
 
             if (usedMB > MAX_MEMORY_MB) {
-                logWarning("⚠ High memory usage detected: " + usedMB + " MB");
+                LOGGER.warn("⚠ High memory usage detected: {} MB", usedMB);
             }
 
             if (threadCount > MAX_THREADS) {
-                logWarning("⚠ High thread count detected: " + threadCount + " threads");
+                LOGGER.warn("⚠ High thread count detected: {} threads", threadCount);
             }
         }, 10, 10, TimeUnit.SECONDS); // check every 10 seconds
     }

@@ -97,7 +97,7 @@ public class LiveLogMonitor {
                 if (!culprit.isEmpty()) {
                     logEntry += " (requested by: " + culprit + ")";
                 }
-                write(RUNTIME_LOG, logEntry);
+                write(logEntry);
 
                 // build chat notification
                 String adviceMsg = classification
@@ -108,15 +108,15 @@ public class LiveLogMonitor {
             }
             else if (event.getLevel().isMoreSpecificThan(
                     org.apache.logging.log4j.Level.ERROR)) {
-                write(RUNTIME_LOG, "[UNCLASSIFIED] ["
+                write("[UNCLASSIFIED] ["
                         + Instant.now() + "] " + msg);
             }
         }
     }
 
-    private static void write(Path path, String line) {
+    private static void write(String line) {
         try {
-            Files.writeString(path, line + "\n",
+            Files.writeString(LiveLogMonitor.RUNTIME_LOG, line + "\n",
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             System.err.println("[Debug Guardian] Failed writing runtime log: "
@@ -152,7 +152,7 @@ public class LiveLogMonitor {
         for (StackTraceElement el : thrown.getStackTrace()) {
             sb.append("    at ").append(el).append("\n");
         }
-        write(RUNTIME_LOG, "[" + Instant.now() + "] " + sb.toString());
+        write("[" + Instant.now() + "] " + sb.toString());
 
         String shortMsg = thrown.getClass().getSimpleName()
                 + ": " + thrown.getMessage();
