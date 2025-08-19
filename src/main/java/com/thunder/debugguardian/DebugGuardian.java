@@ -4,6 +4,8 @@ import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
+import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
+import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.minecraft.network.FriendlyByteBuf;
@@ -70,6 +72,8 @@ public class DebugGuardian {
         LiveLogMonitor.start();
         PerformanceMonitor.init();
         PostMortemRecorder.init();
+        WorldGenFreezeDetector.start();
+        ThreadUsageMonitor.start();
 
     }
 
