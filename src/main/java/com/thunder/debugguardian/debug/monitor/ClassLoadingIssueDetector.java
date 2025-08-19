@@ -10,7 +10,16 @@ public class ClassLoadingIssueDetector {
      */
     public static String identifyCulpritMod(Throwable t) {
         if (t == null) return "Unknown";
-        for (StackTraceElement ste : t.getStackTrace()) {
+        return identifyCulpritMod(t.getStackTrace());
+    }
+
+    /**
+     * Scans the stack trace elements directly and returns the first modId
+     * whose package prefix matches a frame, or "Unknown" if none match.
+     */
+    public static String identifyCulpritMod(StackTraceElement[] stack) {
+        if (stack == null) return "Unknown";
+        for (StackTraceElement ste : stack) {
             String cls = ste.getClassName();
             for (IModInfo mod : ModList.get().getMods()) {
                 if (cls.startsWith(mod.getModId() + ".")) {
