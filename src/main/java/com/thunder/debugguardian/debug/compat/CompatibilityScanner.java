@@ -31,7 +31,7 @@ public class CompatibilityScanner {
                 ModList mods = ModList.get();
                 if (mods.isLoaded(a) && (b == null || mods.isLoaded(b))) {
                     String reason = obj.get("reason").getAsString();
-                    DebugGuardian.LOGGER.warn("Incompatibility detected: " + a + (b != null ? "/" + b : "") + ": " + reason);
+                    DebugGuardian.LOGGER.warn("Incompatibility detected: {}{}: {}", a, b != null ? "/" + b : "", reason);
                 }
             });
         } catch (IOException e) {
