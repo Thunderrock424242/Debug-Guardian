@@ -40,6 +40,11 @@ public class DebugConfig {
             .comment("Enable real-time in-game log monitoring and notifications")
             .define("logging.enableLiveMonitor", true);
 
+    // Error Tracking Settings
+    public static final ModConfigSpec.IntValue LOGGING_ERROR_REPORT_INTERVAL = BUILDER
+            .comment("Number of identical errors to skip before logging again")
+            .defineInRange("logging.errorReportInterval", 100, 1, 10000);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 
@@ -50,6 +55,7 @@ public class DebugConfig {
     public final double performanceMemoryWarningRatio;
     public final boolean compatibilityEnableScan;
     public final boolean loggingEnableLiveMonitor;
+    public final int loggingErrorReportInterval;
 
     private DebugConfig() {
         this.postmortemBufferSize = POSTMORTEM_BUFFER_SIZE.get();
@@ -58,6 +64,7 @@ public class DebugConfig {
         this.performanceMemoryWarningRatio = PERFORMANCE_MEMORY_RATIO.get();
         this.compatibilityEnableScan = COMPAT_ENABLE_SCAN.get();
         this.loggingEnableLiveMonitor = LOGGING_ENABLE_LIVE.get();
+        this.loggingErrorReportInterval = LOGGING_ERROR_REPORT_INTERVAL.get();
     }
 
     public static DebugConfig get() {
