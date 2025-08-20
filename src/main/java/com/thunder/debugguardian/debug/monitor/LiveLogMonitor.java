@@ -39,6 +39,22 @@ public class LiveLogMonitor {
                 "Unexpected null value; mod instability possible.");
         errorClassifications.put("Exception in server tick loop",
                 "Fatal error during world tick; risk of corruption.");
+        errorClassifications.put("Missing registry",
+                "A registry entry could not be found; check mod versions.");
+        errorClassifications.put("Duplicate mod",
+                "Duplicate mod IDs detected; remove extras.");
+        errorClassifications.put("Invalid config",
+                "A configuration file failed to load; verify its contents.");
+        errorClassifications.put("Failed to handle handshake",
+                "Network handshake failed; a mod may be incompatible.");
+        errorClassifications.put("Resource reload failed",
+                "A resource pack failed to reload; check data or assets.");
+        errorClassifications.put("Registry remapping failed",
+                "Registry remapping failed during world load; check mod updates.");
+        errorClassifications.put("Error generating chunk",
+                "A chunk failed to generate; world may be corrupted.");
+        errorClassifications.put("Failed to save chunk",
+                "Chunk data failed to save; check disk health or mods.");
     }
 
     public static void start() {
