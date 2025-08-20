@@ -6,6 +6,8 @@ import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
+import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
+import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.minecraft.network.FriendlyByteBuf;
@@ -64,6 +66,7 @@ public class DebugGuardian {
         container.registerConfig(ModConfig.Type.COMMON, DebugConfig.SPEC);
 
         Watchdog.start();
+        StartupFailureReporter.install();
 
 
     }
@@ -74,6 +77,7 @@ public class DebugGuardian {
         PostMortemRecorder.init();
         WorldGenFreezeDetector.start();
         ThreadUsageMonitor.start();
+        GcPauseMonitor.start();
 
     }
 
