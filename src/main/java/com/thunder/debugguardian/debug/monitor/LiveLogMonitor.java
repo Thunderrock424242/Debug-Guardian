@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.core.LogEvent;
 
@@ -80,7 +81,8 @@ public class LiveLogMonitor {
     private static class LiveAppender extends AbstractAppender {
         protected LiveAppender(String name) {
             super(name, new ErrorTracker(),
-                    PatternLayout.newBuilder().withPattern("%m").build(), false);
+                    PatternLayout.newBuilder().withPattern("%m").build(), false,
+                    Property.EMPTY_ARRAY);
             start();
         }
 
