@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -40,8 +41,10 @@ public class WorldHangDetector {
                 t.setDaemon(true);
                 return t;
             });
+
     private static final Path DUMP_DIR =
             FMLPaths.GAMEDIR.get().resolve("debugguardian");
+  
     private static volatile long lastTick = System.currentTimeMillis();
     private static volatile StackTraceElement[] lastStackTrace;
     private static volatile int matchCount;
@@ -76,6 +79,7 @@ public class WorldHangDetector {
             }
 
             if (matchCount >= REQUIRED_MATCHES) {
+
                 ThreadMXBean bean = ManagementFactory.getThreadMXBean();
                 ThreadInfo info = bean.getThreadInfo(serverThread.getId());
                 String lock = info != null ? String.valueOf(info.getLockName()) : "unknown";
@@ -86,12 +90,20 @@ public class WorldHangDetector {
                 DebugGuardian.LOGGER.warn(
                         "Server thread {} unresponsive for {} ms; waiting on {} owned by {}; blocked at {} via {} (mod: {})",
                         serverThread.getState(), elapsed, lock, owner, top, culpritFrame, culprit);
+
+                String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
+                StackTraceElement top = stack.length > 0 ? stack[0] : null;
+                DebugGuardian.LOGGER.warn(
+                        "Server thread {} unresponsive for {} ms; possible culprit mod {} at {}",
+                        serverThread.getState(), elapsed, culprit, top);
+
                 if (DebugGuardian.LOGGER.isDebugEnabled()) {
                     for (StackTraceElement element : stack) {
                         DebugGuardian.LOGGER.debug("    at {}", element);
                     }
                 }
                 dumpThreads(bean);
+
                 matchCount = 0;
                 lastStackTrace = null;
                 lastTick = now; // reset to avoid spamming
