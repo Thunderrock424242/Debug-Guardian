@@ -62,6 +62,34 @@ public class ClassLoadingIssueDetector {
         return "Unknown";
     }
 
+    /**
+     * Returns the first stack trace element that appears to originate from a mod
+     * or, if none match, the first non-JDK/MC frame. Falls back to the top
+     * frame when all elements come from the JDK or Minecraft core.
+     */
+    public static StackTraceElement findCulpritFrame(StackTraceElement[] stack) {
+        if (stack == null || stack.length == 0) {
+            return null;
+        }
+        for (StackTraceElement ste : stack) {
+            if (!"Unknown".equals(identifyCulpritMod(new StackTraceElement[]{ste}))) {
+                return ste;
+            }
+        }
+        for (StackTraceElement ste : stack) {
+            String cls = ste.getClassName();
+            if (!cls.startsWith("java.") &&
+                !cls.startsWith("jdk.") &&
+                !cls.startsWith("sun.") &&
+                !cls.startsWith("net.minecraft.") &&
+                !cls.startsWith("com.mojang.") &&
+                !cls.startsWith("net.neoforged.")) {
+                return ste;
+            }
+        }
+        return stack[0];
+    }
+
     private static String findByCodeSource(String clsName) {
         try {
             Class<?> cls = Class.forName(clsName);
