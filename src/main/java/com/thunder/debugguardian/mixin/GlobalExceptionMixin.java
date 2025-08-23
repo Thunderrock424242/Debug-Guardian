@@ -13,8 +13,6 @@ public abstract class GlobalExceptionMixin {
     @Inject(method = "run", at = @At("HEAD"))
     private void onGameStart(CallbackInfo ci) {
         // Global uncaught exception handler
-        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            LiveLogMonitor.captureThrowable(throwable);
-        });
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> LiveLogMonitor.captureThrowable(throwable));
     }
 }
