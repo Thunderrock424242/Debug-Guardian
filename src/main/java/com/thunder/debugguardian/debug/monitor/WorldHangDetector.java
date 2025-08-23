@@ -5,10 +5,23 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import net.neoforged.fml.loading.FMLPaths;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
@@ -28,6 +41,10 @@ public class WorldHangDetector {
                 t.setDaemon(true);
                 return t;
             });
+
+    private static final Path DUMP_DIR =
+            FMLPaths.GAMEDIR.get().resolve("debugguardian");
+  
     private static volatile long lastTick = System.currentTimeMillis();
     private static volatile StackTraceElement[] lastStackTrace;
     private static volatile int matchCount;
@@ -62,16 +79,31 @@ public class WorldHangDetector {
             }
 
             if (matchCount >= REQUIRED_MATCHES) {
+
+                ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+                ThreadInfo info = bean.getThreadInfo(serverThread.getId());
+                String lock = info != null ? String.valueOf(info.getLockName()) : "unknown";
+                String owner = info != null ? String.valueOf(info.getLockOwnerName()) : "unknown";
+                String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
+                StackTraceElement top = stack.length > 0 ? stack[0] : null;
+                StackTraceElement culpritFrame = ClassLoadingIssueDetector.findCulpritFrame(stack);
+                DebugGuardian.LOGGER.warn(
+                        "Server thread {} unresponsive for {} ms; waiting on {} owned by {}; blocked at {} via {} (mod: {})",
+                        serverThread.getState(), elapsed, lock, owner, top, culpritFrame, culprit);
+
                 String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
                 StackTraceElement top = stack.length > 0 ? stack[0] : null;
                 DebugGuardian.LOGGER.warn(
                         "Server thread {} unresponsive for {} ms; possible culprit mod {} at {}",
                         serverThread.getState(), elapsed, culprit, top);
+
                 if (DebugGuardian.LOGGER.isDebugEnabled()) {
                     for (StackTraceElement element : stack) {
                         DebugGuardian.LOGGER.debug("    at {}", element);
                     }
                 }
+                dumpThreads(bean);
+
                 matchCount = 0;
                 lastStackTrace = null;
                 lastTick = now; // reset to avoid spamming
@@ -89,6 +121,25 @@ public class WorldHangDetector {
             }
         }
         return null;
+    }
+
+    private static void dumpThreads(ThreadMXBean bean) {
+        try {
+            Files.createDirectories(DUMP_DIR);
+            String ts = LocalDateTime.now().format(
+                    DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            Path file = DUMP_DIR.resolve("world-hang-" + ts + ".log");
+            try (BufferedWriter writer = Files.newBufferedWriter(file,
+                    StandardOpenOption.CREATE_NEW)) {
+                for (ThreadInfo info : bean.dumpAllThreads(true, true)) {
+                    writer.write(info.toString());
+                    writer.newLine();
+                }
+            }
+            DebugGuardian.LOGGER.warn("Thread dump written to {}", file);
+        } catch (IOException e) {
+            DebugGuardian.LOGGER.error("Failed to write thread dump", e);
+        }
     }
 }
 
