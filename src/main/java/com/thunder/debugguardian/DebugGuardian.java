@@ -7,6 +7,7 @@ import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
+import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
@@ -78,6 +79,7 @@ public class DebugGuardian {
         WorldGenFreezeDetector.start();
         ThreadUsageMonitor.start();
         GcPauseMonitor.start();
+        WorldHangDetector.start();
 
     }
 
