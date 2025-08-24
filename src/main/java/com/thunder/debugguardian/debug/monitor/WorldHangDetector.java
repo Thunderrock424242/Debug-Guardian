@@ -81,7 +81,7 @@ public class WorldHangDetector {
             if (matchCount >= REQUIRED_MATCHES) {
 
                 ThreadMXBean bean = ManagementFactory.getThreadMXBean();
-                ThreadInfo info = bean.getThreadInfo(serverThread.getId());
+                ThreadInfo info = bean.getThreadInfo(serverThread.threadId());
                 String lock = info != null ? String.valueOf(info.getLockName()) : "unknown";
                 String owner = info != null ? String.valueOf(info.getLockOwnerName()) : "unknown";
                 String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
