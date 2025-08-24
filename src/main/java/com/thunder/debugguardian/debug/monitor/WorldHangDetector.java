@@ -91,12 +91,6 @@ public class WorldHangDetector {
                         "Server thread {} unresponsive for {} ms; waiting on {} owned by {}; blocked at {} via {} (mod: {})",
                         serverThread.getState(), elapsed, lock, owner, top, culpritFrame, culprit);
 
-                String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
-                StackTraceElement top = stack.length > 0 ? stack[0] : null;
-                DebugGuardian.LOGGER.warn(
-                        "Server thread {} unresponsive for {} ms; possible culprit mod {} at {}",
-                        serverThread.getState(), elapsed, culprit, top);
-
                 if (DebugGuardian.LOGGER.isDebugEnabled()) {
                     for (StackTraceElement element : stack) {
                         DebugGuardian.LOGGER.debug("    at {}", element);
