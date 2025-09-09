@@ -45,6 +45,15 @@ public class DebugConfig {
             .comment("Number of identical errors to skip before logging again")
             .defineInRange("logging.errorReportInterval", 100, 1, 10000);
 
+    // Force Close Debugging Settings
+    public static final ModConfigSpec.BooleanValue FORCE_CLOSE_ENABLE = BUILDER
+            .comment("Enable capturing mod stacks when the game is forcibly closed")
+            .define("debug.forceClose.enable", true);
+
+    public static final ModConfigSpec.BooleanValue FORCE_CLOSE_LAUNCH_HELPER = BUILDER
+            .comment("Launch a helper JVM alongside the game for deeper debugging")
+            .define("debug.forceClose.launchHelper", false);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 
@@ -56,6 +65,8 @@ public class DebugConfig {
     public final boolean compatibilityEnableScan;
     public final boolean loggingEnableLiveMonitor;
     public final int loggingErrorReportInterval;
+    public final boolean forceCloseEnable;
+    public final boolean forceCloseLaunchHelper;
 
     private DebugConfig() {
         this.postmortemBufferSize = POSTMORTEM_BUFFER_SIZE.get();
@@ -65,6 +76,8 @@ public class DebugConfig {
         this.compatibilityEnableScan = COMPAT_ENABLE_SCAN.get();
         this.loggingEnableLiveMonitor = LOGGING_ENABLE_LIVE.get();
         this.loggingErrorReportInterval = LOGGING_ERROR_REPORT_INTERVAL.get();
+        this.forceCloseEnable = FORCE_CLOSE_ENABLE.get();
+        this.forceCloseLaunchHelper = FORCE_CLOSE_LAUNCH_HELPER.get();
     }
 
     public static DebugConfig get() {

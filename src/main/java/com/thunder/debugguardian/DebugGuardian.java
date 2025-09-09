@@ -9,6 +9,7 @@ import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
+import com.thunder.debugguardian.debug.monitor.ForceCloseDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.minecraft.network.FriendlyByteBuf;
@@ -80,6 +81,7 @@ public class DebugGuardian {
         ThreadUsageMonitor.start();
         GcPauseMonitor.start();
         WorldHangDetector.start();
+        ForceCloseDetector.start();
 
     }
 
