@@ -1,0 +1,10 @@
+{
+  "incompatibilities": [
+    {
+      "modA": "examplemod",
+      "modB": "othermod",
+      "reason": "Describe the incompatibility here"
+    }
+  ]
+}
+

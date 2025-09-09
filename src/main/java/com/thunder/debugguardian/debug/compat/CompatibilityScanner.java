@@ -1,5 +1,6 @@
 package com.thunder.debugguardian.debug.compat;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.thunder.debugguardian.DebugGuardian;
@@ -11,6 +12,7 @@ import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -23,6 +25,18 @@ public class CompatibilityScanner {
         if (!DebugConfig.get().compatibilityEnableScan) return;
         try {
             Path json = FMLPaths.CONFIGDIR.get().resolve("compatibility.json");
+            if (Files.notExists(json)) {
+                try (InputStream in = CompatibilityScanner.class.getResourceAsStream("/compatibility.json")) {
+                    if (in != null) {
+                        Files.copy(in, json);
+                    } else {
+                        JsonObject tmpl = new JsonObject();
+                        tmpl.add("incompatibilities", new JsonArray());
+                        Files.writeString(json, tmpl.toString());
+                    }
+                }
+            }
+
             JsonObject root = JsonParser.parseString(Files.readString(json)).getAsJsonObject();
             root.getAsJsonArray("incompatibilities").forEach(el -> {
                 JsonObject obj = el.getAsJsonObject();

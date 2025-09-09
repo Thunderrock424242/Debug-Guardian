@@ -34,6 +34,7 @@ public class ForceCloseDetector {
         }
 
         if (cfg.forceCloseLaunchHelper) {
+            DebugGuardian.LOGGER.info("forceClose.launchHelper enabled; starting helper JVM");
             launchHelper();
         }
 
@@ -70,7 +71,9 @@ public class ForceCloseDetector {
     private static void launchHelper() {
         try {
             new ProcessBuilder("java", "-cp", System.getProperty("java.class.path"),
-                    "com.thunder.debugguardian.debug.external.DebugHelper").start();
+                    "com.thunder.debugguardian.debug.external.DebugHelper")
+                    .inheritIO()
+                    .start();
             DebugGuardian.LOGGER.info("Debug helper process launched");
         } catch (IOException e) {
             DebugGuardian.LOGGER.error("Failed to launch debug helper process", e);
