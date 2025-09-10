@@ -26,16 +26,20 @@ import java.util.Map;
 public class ForceCloseDetector {
     private static final Path DUMP_DIR = FMLPaths.GAMEDIR.get().resolve("debugguardian");
 
-    /** Starts the detector and optional helper process based on config. */
+    /**
+     * Starts the optional helper process and, if enabled, the force-close
+     * shutdown hook detector.
+     */
     public static void start() {
         DebugConfig cfg = DebugConfig.get();
-        if (!cfg.forceCloseEnable) {
-            return;
-        }
 
         if (cfg.forceCloseLaunchHelper) {
             DebugGuardian.LOGGER.info("forceClose.launchHelper enabled; starting helper JVM");
             launchHelper();
+        }
+
+        if (!cfg.forceCloseEnable) {
+            return;
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(ForceCloseDetector::dumpStacks,
