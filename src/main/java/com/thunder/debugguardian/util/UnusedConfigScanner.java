@@ -6,7 +6,6 @@ import net.neoforged.fml.ModList;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,21 +19,18 @@ public class UnusedConfigScanner {
     public static void scanForUnusedConfigs(MinecraftServer server) {
         if (!Files.isDirectory(CONFIG_FOLDER)) return;
 
-        try {
-            List<Path> files = Files.list(CONFIG_FOLDER)
-                    .filter(p -> p.toString().endsWith(".toml"))
-                    .toList();
-
-            for (Path file : files) {
-                String fileName = file.getFileName().toString();
-                Matcher matcher = MODID_PATTERN.matcher(fileName);
-                if (matcher.matches()) {
-                    String modid = matcher.group(1);
-                    if (!ModList.get().isLoaded(modid)) {
-                        LOGGER.warn("[DebugGuardian] Unused config detected: '{}' (mod '{}' not loaded)", fileName, modid);
-                    }
-                }
-            }
+        try (var stream = Files.list(CONFIG_FOLDER)) {
+            stream.filter(p -> p.toString().endsWith(".toml"))
+                    .forEach(file -> {
+                        String fileName = file.getFileName().toString();
+                        Matcher matcher = MODID_PATTERN.matcher(fileName);
+                        if (matcher.matches()) {
+                            String modid = matcher.group(1);
+                            if (!ModList.get().isLoaded(modid)) {
+                                LOGGER.warn("[DebugGuardian] Unused config detected: '{}' (mod '{}' not loaded)", fileName, modid);
+                            }
+                        }
+                    });
 
         } catch (IOException e) {
             LOGGER.error("[DebugGuardian] Failed to scan config folder: ", e);
