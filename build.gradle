@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version "2.0.106"
+    id 'net.neoforged.moddev' version "2.0.107"
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -30,7 +30,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 neoForge {
     // Specify the version of NeoForge to use.
-    version = "21.1.197"
+    version = "21.1.208"
 
     parchment {
         mappingsVersion = project.parchment_mappings_version

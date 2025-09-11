@@ -3,10 +3,7 @@ package com.thunder.debugguardian.debug.external;
 import com.google.gson.Gson;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -49,6 +46,8 @@ public class DebugHelper {
                 for (Path p : stream) {
                     return p;
                 }
+            } catch (NoSuchFileException e) {
+                Files.createDirectories(dir);
             }
             Thread.sleep(1000);
         }
