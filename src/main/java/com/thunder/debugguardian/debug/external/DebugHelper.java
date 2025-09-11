@@ -24,11 +24,14 @@ import java.util.stream.Collectors;
  * <p>
  * It now watches the dump directory for a force-close thread log, parses it
  * into a structured report listing potential culprit mods along with full
- * stack traces, writes the report to disk, and then exits.
+ * stack traces, writes the report to disk, and performs a basic analysis
+ * highlighting likely causes. This analysis can later be replaced with an
+ * AI-powered implementation.
  */
 public class DebugHelper {
 
-    private record ThreadReport(String thread, String mod, List<String> stack) {}
+    // ThreadReport is defined as a top-level record to allow external analyzers
+    // to operate on the parsed data.
 
     public static void main(String[] args) {
         if (args.length == 0) {
@@ -48,6 +51,7 @@ public class DebugHelper {
             System.out.println("Analysis written to " + out);
             writeSummary(dumpDir, report, ts);
             writeSuspects(dumpDir, report, ts);
+            writeExplanation(dumpDir, report, ts);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -132,6 +136,17 @@ public class DebugHelper {
         Path suspects = dir.resolve("suspects-" + ts + ".txt");
         Files.write(suspects, lines);
         System.out.println("Suspects written to " + suspects);
+    }
+
+    private static void writeExplanation(Path dir, List<ThreadReport> report, String ts) throws IOException {
+        String apiKey = System.getenv("DEBUG_GUARDIAN_AI_KEY");
+        LogAnalyzer analyzer = (apiKey != null && !apiKey.isBlank())
+                ? new AiLogAnalyzer(apiKey)
+                : new BasicLogAnalyzer();
+        String explanation = analyzer.analyze(report);
+        Path file = dir.resolve("explanation-" + ts + ".txt");
+        Files.writeString(file, explanation);
+        System.out.println("Explanation written to " + file);
     }
 
     private static String timestamp() {
