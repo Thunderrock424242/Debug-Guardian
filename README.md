@@ -19,11 +19,13 @@ monitors crash dumps. It now parses force-close logs and generates multiple
 reports including a heuristic explanation of likely causes. The analyzer is
 structured so that future versions can hook into an AI service for deeper log
 diagnostics. By default the helper uses a simple heuristic implementation, but
-if the environment variable `DEBUG_GUARDIAN_AI_KEY` is defined it will attempt
-to contact an external service using that key via `AiLogAnalyzer`.
+if the config value `logging.aiServiceApiKey` or the environment variable
+`DEBUG_GUARDIAN_AI_KEY` is defined it will attempt to contact an external
+service using that key via `AiLogAnalyzer`.
 
 The included `AiLogAnalyzer` class demonstrates how an AI service could be
-invoked. It reads the API key from `DEBUG_GUARDIAN_AI_KEY` and contains a
+invoked. It first reads the API key from the `logging.aiServiceApiKey` config
+entry, then falls back to `DEBUG_GUARDIAN_AI_KEY`, and finally uses a
 placeholder that must be replaced with a real key before any external requests
 are made.
 
