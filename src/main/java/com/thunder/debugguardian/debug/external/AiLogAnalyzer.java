@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
  */
 public class AiLogAnalyzer implements LogAnalyzer {
     // Placeholder API endpoint URL
-    private static final String API_URL = "https://api.example.com/analyze";
+    private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    private final String apiKey;
+    private final String apiKey; //"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";
 
     /**
      * Creates an analyzer using the {@code DEBUG_GUARDIAN_AI_KEY} environment
