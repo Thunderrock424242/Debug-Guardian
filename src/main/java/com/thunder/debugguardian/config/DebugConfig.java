@@ -40,6 +40,11 @@ public class DebugConfig {
             .comment("Enable real-time in-game log monitoring and notifications")
             .define("logging.enableLiveMonitor", true);
 
+    // AI Log Analyzer Settings
+    public static final ModConfigSpec.ConfigValue<String> LOGGING_AI_SERVICE_API_KEY = BUILDER
+            .comment("API key for external AI log analyzer; blank uses DEBUG_GUARDIAN_AI_KEY env var")
+            .define("logging.aiServiceApiKey", "");
+
     // Error Tracking Settings
     public static final ModConfigSpec.IntValue LOGGING_ERROR_REPORT_INTERVAL = BUILDER
             .comment("Number of identical errors to skip before logging again")
@@ -64,6 +69,7 @@ public class DebugConfig {
     public final double performanceMemoryWarningRatio;
     public final boolean compatibilityEnableScan;
     public final boolean loggingEnableLiveMonitor;
+    public final String loggingAiServiceApiKey;
     public final int loggingErrorReportInterval;
     public final boolean forceCloseEnable;
     public final boolean forceCloseLaunchHelper;
@@ -75,6 +81,7 @@ public class DebugConfig {
         this.performanceMemoryWarningRatio = PERFORMANCE_MEMORY_RATIO.get();
         this.compatibilityEnableScan = COMPAT_ENABLE_SCAN.get();
         this.loggingEnableLiveMonitor = LOGGING_ENABLE_LIVE.get();
+        this.loggingAiServiceApiKey = LOGGING_AI_SERVICE_API_KEY.get();
         this.loggingErrorReportInterval = LOGGING_ERROR_REPORT_INTERVAL.get();
         this.forceCloseEnable = FORCE_CLOSE_ENABLE.get();
         this.forceCloseLaunchHelper = FORCE_CLOSE_LAUNCH_HELPER.get();
