@@ -1,5 +1,7 @@
 package com.thunder.debugguardian.debug.external;
 
+import com.thunder.debugguardian.config.DebugConfig;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,11 +29,12 @@ public class AiLogAnalyzer implements LogAnalyzer {
     private final String apiKey;
 
     /**
-     * Creates an analyzer using the {@code DEBUG_GUARDIAN_AI_KEY} environment
-     * variable or a placeholder if not present.
+     * Creates an analyzer using the {@code logging.aiServiceApiKey} config
+     * value, falling back to the {@code DEBUG_GUARDIAN_AI_KEY} environment
+     * variable or a placeholder if neither is present.
      */
     public AiLogAnalyzer() {
-        this(System.getenv().getOrDefault("DEBUG_GUARDIAN_AI_KEY", "REPLACE_WITH_REAL_AI_KEY"));
+        this(resolveApiKey());
     }
 
     /**
@@ -39,6 +42,14 @@ public class AiLogAnalyzer implements LogAnalyzer {
      */
     public AiLogAnalyzer(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    private static String resolveApiKey() {
+        String key = DebugConfig.get().loggingAiServiceApiKey;
+        if (key == null || key.isEmpty()) {
+            key = System.getenv().getOrDefault("DEBUG_GUARDIAN_AI_KEY", "REPLACE_WITH_REAL_AI_KEY");
+        }
+        return key;
     }
 
     @Override
