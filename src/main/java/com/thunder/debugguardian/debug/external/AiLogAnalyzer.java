@@ -16,22 +16,22 @@ import java.util.stream.Collectors;
 /**
  * Log analyzer that delegates analysis to an external AI service over HTTP.
  * <p>
- * The implementation demonstrates how thread reports could be serialized and
- * sent to an AI endpoint. It reads an API key from the environment variable
- * {@code DEBUG_GUARDIAN_AI_KEY} and falls back to a hard-coded placeholder if
- * the variable is not defined. The sample URL must be replaced with a real
- * service before use.
+ * This implementation calls the OpenAI chat completions endpoint. If no API
+ * key is configured via the {@code logging.aiServiceApiKey} config value or the
+ * {@code DEBUG_GUARDIAN_AI_KEY} environment variable, the analyzer falls back
+ * to {@link BasicLogAnalyzer} to provide a heuristic explanation.
  */
 public class AiLogAnalyzer implements LogAnalyzer {
-    // Placeholder API endpoint URL
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
+    private static final String MODEL = "gpt-4o-mini";
 
     private final String apiKey;
+    private final BasicLogAnalyzer fallback = new BasicLogAnalyzer();
 
     /**
      * Creates an analyzer using the {@code logging.aiServiceApiKey} config
      * value, falling back to the {@code DEBUG_GUARDIAN_AI_KEY} environment
-     * variable or a placeholder if neither is present.
+     * variable if the config entry is blank.
      */
     public AiLogAnalyzer() {
         this(resolveApiKey());
@@ -46,16 +46,26 @@ public class AiLogAnalyzer implements LogAnalyzer {
 
     private static String resolveApiKey() {
         String key = DebugConfig.get().loggingAiServiceApiKey;
-        if (key == null || key.isEmpty()) {
-            key = System.getenv().getOrDefault("DEBUG_GUARDIAN_AI_KEY", "REPLACE_WITH_REAL_AI_KEY");
+        if (key == null || key.isBlank()) {
+            key = System.getenv("DEBUG_GUARDIAN_AI_KEY");
         }
-        return key;
+        return (key == null || key.isBlank()) ? null : key;
     }
 
     @Override
     public String analyze(List<ThreadReport> threads) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return fallback.analyze(threads);
+        }
+
         try {
-            String payload = buildPayload(threads);
+            String message = buildMessage(threads);
+            String payload = "{" +
+                    "\"model\":\"" + MODEL + "\"," +
+                    "\"messages\":[{" +
+                    "\"role\":\"system\",\"content\":\"You are a Minecraft crash analysis assistant.\"},{" +
+                    "\"role\":\"user\",\"content\":\"" + escape(message) + "\"}]" +
+                    "}";
 
             HttpURLConnection connection = (HttpURLConnection) new URL(API_URL).openConnection();
             connection.setRequestMethod("POST");
@@ -67,28 +77,44 @@ public class AiLogAnalyzer implements LogAnalyzer {
                 os.write(payload.getBytes(StandardCharsets.UTF_8));
             }
 
-            int status = connection.getResponseCode();
-            InputStream responseStream = status >= 200 && status < 300
+            InputStream responseStream = connection.getResponseCode() >= 200 && connection.getResponseCode() < 300
                     ? connection.getInputStream()
                     : connection.getErrorStream();
 
             String response = readAll(responseStream);
-            return response.isEmpty() ? "AI service returned empty response." : response;
+            String content = extractContent(response);
+            return (content == null || content.isBlank())
+                    ? "AI service returned empty response." : content;
         } catch (IOException e) {
             return "Failed to contact AI service: " + e.getMessage();
         }
     }
 
-    private String buildPayload(List<ThreadReport> threads) {
-        String threadJson = threads.stream().map(tr -> {
-            String stack = tr.stack().stream()
-                    .map(frame -> "\"" + escape(frame) + "\"")
-                    .collect(Collectors.joining(","));
-            return "{\"thread\":\"" + escape(tr.thread()) + "\",\"mod\":\"" +
-                    escape(tr.mod()) + "\",\"state\":\"" + escape(tr.state()) +
-                    "\",\"stack\":[" + stack + "]}";
-        }).collect(Collectors.joining(","));
-        return "{\"threads\":[" + threadJson + "]}";
+    /**
+     * Build a plain-text message describing the thread dump that will be sent to
+     * the AI service.
+     */
+    private String buildMessage(List<ThreadReport> threads) {
+        StringBuilder sb = new StringBuilder();
+        for (ThreadReport tr : threads) {
+            sb.append("Thread ").append(tr.thread()).append(" [").append(tr.state()).append("] mod: ")
+              .append(tr.mod()).append("\n");
+            for (String frame : tr.stack()) {
+                sb.append("  ").append(frame).append("\n");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    private static String extractContent(String json) {
+        int idx = json.indexOf("\"content\":\"");
+        if (idx == -1) return null;
+        idx += 11; // length of "content":"
+        int end = json.indexOf("\"", idx);
+        if (end == -1) return null;
+        String content = json.substring(idx, end);
+        return content.replace("\\n", "\n");
     }
 
     private static String readAll(InputStream is) throws IOException {
@@ -101,3 +127,4 @@ public class AiLogAnalyzer implements LogAnalyzer {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
+
