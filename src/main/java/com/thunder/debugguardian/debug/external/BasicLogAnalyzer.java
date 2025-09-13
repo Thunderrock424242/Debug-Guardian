@@ -22,7 +22,7 @@ public class BasicLogAnalyzer implements LogAnalyzer {
 
         for (ThreadReport tr : threads) {
             String topFrame = tr.stack().isEmpty() ? "unknown" : tr.stack().get(0);
-            sb.append(tr.thread()).append('\n')
+            sb.append(tr.thread()).append(" [").append(tr.state()).append("]\n")
               .append("  suspect mod: ").append(tr.mod()).append('\n')
               .append("  top frame: ").append(topFrame).append("\n\n");
         }
