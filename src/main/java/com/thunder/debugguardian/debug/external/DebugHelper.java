@@ -1,6 +1,7 @@
 package com.thunder.debugguardian.debug.external;
 
 import com.google.gson.Gson;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -34,13 +35,16 @@ public class DebugHelper {
     // to operate on the parsed data.
 
     public static void main(String[] args) {
-        if (args.length == 0) {
-            System.err.println("No dump directory provided to DebugHelper");
+        if (args.length < 2) {
+            System.err.println("Usage: DebugHelper <dump directory> <config file>");
             return;
         }
 
         Path dumpDir = Paths.get(args[0]);
+        Path configFile = Paths.get(args[1]);
         System.out.println("Debug helper watching " + dumpDir);
+
+        String apiKey = readApiKey(configFile);
 
         try {
             Path dumpFile = waitForDumpFile(dumpDir);
@@ -51,9 +55,20 @@ public class DebugHelper {
             System.out.println("Analysis written to " + out);
             writeSummary(dumpDir, report, ts);
             writeSuspects(dumpDir, report, ts);
-            writeExplanation(dumpDir, report, ts);
+            writeExplanation(dumpDir, report, ts, apiKey);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private static String readApiKey(Path configFile) {
+        try (CommentedFileConfig cfg = CommentedFileConfig.builder(configFile).build()) {
+            cfg.load();
+            String key = cfg.getOrElse("logging.aiServiceApiKey", "");
+            if (key == null || key.isBlank()) {
+                key = System.getenv("DEBUG_GUARDIAN_AI_KEY");
+            }
+            return key;
         }
     }
 
@@ -165,8 +180,8 @@ public class DebugHelper {
         System.out.println("Suspects written to " + suspects);
     }
 
-    private static void writeExplanation(Path dir, List<ThreadReport> report, String ts) throws IOException {
-        LogAnalyzer analyzer = new AiLogAnalyzer();
+    private static void writeExplanation(Path dir, List<ThreadReport> report, String ts, String apiKey) throws IOException {
+        LogAnalyzer analyzer = new AiLogAnalyzer(apiKey);
         String explanation = analyzer.analyze(report);
         Path file = dir.resolve("explanation-" + ts + ".txt");
         Files.writeString(file, explanation);
