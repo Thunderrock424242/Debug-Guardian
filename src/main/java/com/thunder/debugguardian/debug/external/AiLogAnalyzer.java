@@ -83,8 +83,10 @@ public class AiLogAnalyzer implements LogAnalyzer {
 
             String response = readAll(responseStream);
             String content = extractContent(response);
-            return (content == null || content.isBlank())
-                    ? "AI service returned empty response." : content;
+            if (content == null || content.isBlank()) {
+                return fallback.analyze(threads);
+            }
+            return content;
         } catch (IOException e) {
             return "Failed to contact AI service: " + e.getMessage();
         }
