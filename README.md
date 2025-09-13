@@ -16,12 +16,14 @@ Debug Helper
 ------------
 When debug mode is enabled the project launches a small helper application that
 monitors crash dumps. It now parses force-close logs and generates multiple
-reports including a heuristic explanation of likely causes. The analyzer is
-structured so that future versions can hook into an AI service for deeper log
-diagnostics. If the config value `logging.aiServiceApiKey` or the environment
-variable `DEBUG_GUARDIAN_AI_KEY` is defined the helper contacts OpenAI using
-`AiLogAnalyzer` to generate an explanation. When no key is provided the
-analyzer automatically falls back to the built-in heuristic
+reports including a heuristic explanation of likely causes. Force-close dumps
+include each thread's state, and the analyzer flags when no mod-specific stack
+frames are found, aiding cases where the process was terminated without a clear
+trace. The analyzer is structured so that future versions can hook into an AI
+service for deeper log diagnostics. If the config value `logging.aiServiceApiKey`
+or the environment variable `DEBUG_GUARDIAN_AI_KEY` is defined the helper
+contacts OpenAI using `AiLogAnalyzer` to generate an explanation. When no key is
+provided the analyzer automatically falls back to the built-in heuristic
 `BasicLogAnalyzer`.
 
 The included `AiLogAnalyzer` class sends thread reports to the OpenAI Chat
