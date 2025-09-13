@@ -76,7 +76,8 @@ public class ForceCloseDetector {
         try {
             new ProcessBuilder("java", "-cp", System.getProperty("java.class.path"),
                     "com.thunder.debugguardian.debug.external.DebugHelper",
-                    DUMP_DIR.toString())
+                    DUMP_DIR.toString(),
+                    FMLPaths.CONFIGDIR.get().resolve(DebugGuardian.MOD_ID + "-common.toml").toString())
                     .inheritIO()
                     .start();
             DebugGuardian.LOGGER.info("Debug helper process launched");
