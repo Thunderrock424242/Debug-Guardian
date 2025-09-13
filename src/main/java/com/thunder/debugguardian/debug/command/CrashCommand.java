@@ -22,6 +22,13 @@ public class CrashCommand {
             Commands.literal("crash")
                 .requires(source -> source.hasPermission(2))
                 .executes(ctx -> {
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException ignored) {
+                        }
+                        System.exit(-1);
+                    }).start();
                     throw new RuntimeException("Intentional crash triggered by /crash command");
                 })
         );
