@@ -166,10 +166,7 @@ public class DebugHelper {
     }
 
     private static void writeExplanation(Path dir, List<ThreadReport> report, String ts) throws IOException {
-        String apiKey = System.getenv("DEBUG_GUARDIAN_AI_KEY");
-        LogAnalyzer analyzer = (apiKey != null && !apiKey.isBlank())
-                ? new AiLogAnalyzer(apiKey)
-                : new BasicLogAnalyzer();
+        LogAnalyzer analyzer = new AiLogAnalyzer();
         String explanation = analyzer.analyze(report);
         Path file = dir.resolve("explanation-" + ts + ".txt");
         Files.writeString(file, explanation);
