@@ -26,7 +26,7 @@ public class AiLogAnalyzer implements LogAnalyzer {
     // Placeholder API endpoint URL
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
-    private final String apiKey; //"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";
+    private final String apiKey;
 
     /**
      * Creates an analyzer using the {@code logging.aiServiceApiKey} config
