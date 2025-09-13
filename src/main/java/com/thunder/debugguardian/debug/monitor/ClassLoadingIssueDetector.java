@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.CodeSource;
 import java.util.Enumeration;
+import java.util.Locale;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -47,12 +48,19 @@ public class ClassLoadingIssueDetector {
         if (stack == null) return "Unknown";
         for (StackTraceElement ste : stack) {
             String cls = ste.getClassName();
-            // first try package prefix match
+            String clsLower = cls.toLowerCase(Locale.ROOT);
+
+            // first try to match mod id within the package name
             for (IModInfo mod : ModList.get().getMods()) {
-                if (cls.startsWith(mod.getModId() + ".")) {
-                    return mod.getModId();
+                String modId = mod.getModId();
+                String modLower = modId.toLowerCase(Locale.ROOT);
+                if (clsLower.startsWith(modLower + ".")
+                        || clsLower.contains("." + modLower + ".")
+                        || clsLower.endsWith("." + modLower)) {
+                    return modId;
                 }
             }
+
             // fall back to looking up the jar file
             String modId = findByCodeSource(cls);
             if (modId != null) {
