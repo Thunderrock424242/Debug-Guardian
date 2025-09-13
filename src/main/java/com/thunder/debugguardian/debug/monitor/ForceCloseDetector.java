@@ -57,7 +57,7 @@ public class ForceCloseDetector {
                     Thread t = e.getKey();
                     StackTraceElement[] stack = e.getValue();
                     String mod = ClassLoadingIssueDetector.identifyCulpritMod(stack);
-                    writer.write("Thread: " + t.getName() + " mod: " + mod);
+                    writer.write("Thread: " + t.getName() + " mod: " + mod + " state: " + t.getState());
                     writer.newLine();
                     for (StackTraceElement ste : stack) {
                         writer.write("    at " + ste);
