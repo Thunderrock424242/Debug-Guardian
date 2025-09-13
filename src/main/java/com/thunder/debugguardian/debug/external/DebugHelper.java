@@ -87,30 +87,57 @@ public class DebugHelper {
         List<String> lines = Files.readAllLines(file);
         String currentThread = null;
         String currentMod = null;
+        String currentState = null;
         List<String> currentStack = new ArrayList<>();
 
         for (String line : lines) {
             if (line.startsWith("Thread: ")) {
                 if (currentThread != null) {
-                    threads.add(new ThreadReport(currentThread, currentMod, currentStack));
+                    threads.add(new ThreadReport(currentThread, currentMod, currentState, currentStack));
                     currentStack = new ArrayList<>();
                 }
                 String rest = line.substring("Thread: ".length());
-                String[] parts = rest.split(" mod: ", 2);
-                currentThread = parts[0].trim();
-                currentMod = parts.length > 1 ? parts[1].trim() : "unknown";
+                currentThread = rest.trim();
+                currentMod = "unknown";
+                currentState = "unknown";
+
+                int modIdx = rest.indexOf(" mod: ");
+                int stateIdx = rest.indexOf(" state: ");
+
+                if (modIdx >= 0 && (stateIdx == -1 || modIdx < stateIdx)) {
+                    currentThread = rest.substring(0, modIdx).trim();
+                    String afterMod = rest.substring(modIdx + " mod: ".length());
+                    int stateAfterMod = afterMod.indexOf(" state: ");
+                    if (stateAfterMod >= 0) {
+                        currentMod = afterMod.substring(0, stateAfterMod).trim();
+                        currentState = afterMod.substring(stateAfterMod + " state: ".length()).trim();
+                    } else {
+                        currentMod = afterMod.trim();
+                    }
+                } else if (stateIdx >= 0) {
+                    currentThread = rest.substring(0, stateIdx).trim();
+                    String afterState = rest.substring(stateIdx + " state: ".length());
+                    int modAfterState = afterState.indexOf(" mod: ");
+                    if (modAfterState >= 0) {
+                        currentState = afterState.substring(0, modAfterState).trim();
+                        currentMod = afterState.substring(modAfterState + " mod: ".length()).trim();
+                    } else {
+                        currentState = afterState.trim();
+                    }
+                }
             } else if (line.startsWith("    at ")) {
                 currentStack.add(line.trim());
             } else if (line.isBlank() && currentThread != null) {
-                threads.add(new ThreadReport(currentThread, currentMod, currentStack));
+                threads.add(new ThreadReport(currentThread, currentMod, currentState, currentStack));
                 currentThread = null;
                 currentMod = null;
+                currentState = null;
                 currentStack = new ArrayList<>();
             }
         }
 
         if (currentThread != null) {
-            threads.add(new ThreadReport(currentThread, currentMod, currentStack));
+            threads.add(new ThreadReport(currentThread, currentMod, currentState, currentStack));
         }
 
         return threads;
@@ -119,7 +146,7 @@ public class DebugHelper {
     private static void writeSummary(Path dir, List<ThreadReport> report, String ts) throws IOException {
         List<String> lines = new ArrayList<>();
         for (ThreadReport tr : report) {
-            lines.add(tr.thread() + " - " + tr.mod() + " (" + tr.stack().size() + " frames)");
+            lines.add(tr.thread() + " - " + tr.mod() + " [" + tr.state() + "] (" + tr.stack().size() + " frames)");
         }
         Path summary = dir.resolve("summary-" + ts + ".txt");
         Files.write(summary, lines);

@@ -85,7 +85,8 @@ public class AiLogAnalyzer implements LogAnalyzer {
                     .map(frame -> "\"" + escape(frame) + "\"")
                     .collect(Collectors.joining(","));
             return "{\"thread\":\"" + escape(tr.thread()) + "\",\"mod\":\"" +
-                    escape(tr.mod()) + "\",\"stack\":[" + stack + "]}";
+                    escape(tr.mod()) + "\",\"state\":\"" + escape(tr.state()) +
+                    "\",\"stack\":[" + stack + "]}";
         }).collect(Collectors.joining(","));
         return "{\"threads\":[" + threadJson + "]}";
     }
