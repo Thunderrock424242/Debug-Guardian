@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 public class AiLogAnalyzer implements LogAnalyzer {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
-    private static final String MODEL = "gpt-4o-mini";
+    private static final String MODEL = "gpt-4o";
 
     private final String apiKey;
     private final BasicLogAnalyzer fallback = new BasicLogAnalyzer();
