@@ -18,16 +18,16 @@ When debug mode is enabled the project launches a small helper application that
 monitors crash dumps. It now parses force-close logs and generates multiple
 reports including a heuristic explanation of likely causes. The analyzer is
 structured so that future versions can hook into an AI service for deeper log
-diagnostics. By default the helper uses a simple heuristic implementation, but
-if the config value `logging.aiServiceApiKey` or the environment variable
-`DEBUG_GUARDIAN_AI_KEY` is defined it will attempt to contact an external
-service using that key via `AiLogAnalyzer`.
+diagnostics. If the config value `logging.aiServiceApiKey` or the environment
+variable `DEBUG_GUARDIAN_AI_KEY` is defined the helper contacts OpenAI using
+`AiLogAnalyzer` to generate an explanation. When no key is provided the
+analyzer automatically falls back to the built-in heuristic
+`BasicLogAnalyzer`.
 
-The included `AiLogAnalyzer` class demonstrates how an AI service could be
-invoked. It first reads the API key from the `logging.aiServiceApiKey` config
-entry, then falls back to `DEBUG_GUARDIAN_AI_KEY`, and finally uses a
-placeholder that must be replaced with a real key before any external requests
-are made.
+The included `AiLogAnalyzer` class sends thread reports to the OpenAI Chat
+Completions API. It first reads the API key from the `logging.aiServiceApiKey`
+config entry, then falls back to `DEBUG_GUARDIAN_AI_KEY`. If neither is
+supplied it invokes the heuristic analyzer instead.
 
 Mapping Names:
 ============
