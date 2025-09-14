@@ -1,17 +1,20 @@
 package com.thunder.debugguardian.debug.external;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.thunder.debugguardian.config.DebugConfig;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Log analyzer that delegates analysis to an external AI service over HTTP.
@@ -24,6 +27,7 @@ import java.util.stream.Collectors;
 public class AiLogAnalyzer implements LogAnalyzer {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
     private static final String MODEL = "gpt-4o";
+    private static final int TIMEOUT_MS = 5000;
 
     private final String apiKey;
     private final BasicLogAnalyzer fallback = new BasicLogAnalyzer();
@@ -58,38 +62,63 @@ public class AiLogAnalyzer implements LogAnalyzer {
             return fallback.analyze(threads);
         }
 
+        String message = buildMessage(threads);
         try {
-            String message = buildMessage(threads);
-            String payload = "{" +
-                    "\"model\":\"" + MODEL + "\"," +
-                    "\"messages\":[{" +
-                    "\"role\":\"system\",\"content\":\"You are a Minecraft crash analysis assistant.\"},{" +
-                    "\"role\":\"user\",\"content\":\"" + escape(message) + "\"}]" +
-                    "}";
+            String response = CompletableFuture.supplyAsync(() -> requestAi(message))
+                    .get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            if (response == null || response.isBlank()) {
+                return fallback.analyze(threads);
+            }
+            return response;
+        } catch (Exception e) {
+            return "Failed to contact AI service: " + e.getMessage();
+        }
+    }
 
-            HttpURLConnection connection = (HttpURLConnection) new URL(API_URL).openConnection();
+    private String requestAi(String message) {
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("model", MODEL);
+            JsonArray msgs = new JsonArray();
+            JsonObject sys = new JsonObject();
+            sys.addProperty("role", "system");
+            sys.addProperty("content", "You are a Minecraft crash analysis assistant.");
+            JsonObject user = new JsonObject();
+            user.addProperty("role", "user");
+            user.addProperty("content", message);
+            msgs.add(sys);
+            msgs.add(user);
+            payload.add("messages", msgs);
+
+            HttpURLConnection connection = (HttpURLConnection) URI.create(API_URL).toURL().openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            connection.setConnectTimeout(TIMEOUT_MS);
+            connection.setReadTimeout(TIMEOUT_MS);
             connection.setDoOutput(true);
 
             try (OutputStream os = connection.getOutputStream()) {
-                os.write(payload.getBytes(StandardCharsets.UTF_8));
+                os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
             }
 
-            InputStream responseStream = connection.getResponseCode() >= 200 && connection.getResponseCode() < 300
+            try (InputStream responseStream = connection.getResponseCode() >= 200 && connection.getResponseCode() < 300
                     ? connection.getInputStream()
                     : connection.getErrorStream();
-
-            String response = readAll(responseStream);
-            String content = extractContent(response);
-            if (content == null || content.isBlank()) {
-                return fallback.analyze(threads);
+                 InputStreamReader reader = new InputStreamReader(responseStream, StandardCharsets.UTF_8)) {
+                JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+                JsonArray choices = root.getAsJsonArray("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    JsonObject msg = choices.get(0).getAsJsonObject().getAsJsonObject("message");
+                    if (msg != null && msg.has("content")) {
+                        return msg.get("content").getAsString();
+                    }
+                }
             }
-            return content;
         } catch (IOException e) {
-            return "Failed to contact AI service: " + e.getMessage();
+            throw new RuntimeException(e);
         }
+        return null;
     }
 
     /**
@@ -108,25 +137,4 @@ public class AiLogAnalyzer implements LogAnalyzer {
         }
         return sb.toString();
     }
-
-    private static String extractContent(String json) {
-        int idx = json.indexOf("\"content\":\"");
-        if (idx == -1) return null;
-        idx += 11; // length of "content":"
-        int end = json.indexOf("\"", idx);
-        if (end == -1) return null;
-        String content = json.substring(idx, end);
-        return content.replace("\\n", "\n");
-    }
-
-    private static String readAll(InputStream is) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            return reader.lines().collect(Collectors.joining("\n"));
-        }
-    }
-
-    private static String escape(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
 }
-

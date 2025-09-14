@@ -1,20 +1,17 @@
 package com.thunder.debugguardian;
 
 import com.thunder.debugguardian.config.DebugConfig;
-import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.Watchdog;
+import com.thunder.debugguardian.debug.monitor.ForceCloseDetector;
+import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
+import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
+import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
-import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
-import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
-import com.thunder.debugguardian.debug.monitor.ForceCloseDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -22,15 +19,10 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Mod(DebugGuardian.MOD_ID)
 
@@ -45,12 +37,6 @@ public class DebugGuardian {
      * The constant MOD_ID.
      */
     public static final String MOD_ID = "debugguardian";
-    private static final Map<CustomPacketPayload.Type<?>, NetworkMessage<?>> MESSAGES = new HashMap<>();
-
-    private record NetworkMessage<T extends CustomPacketPayload>(StreamCodec<? extends FriendlyByteBuf, T> reader,
-                                                                 IPayloadHandler<T> handler) {
-    }
-
     /**
      * Create the Debug Guardian mod instance.
      *
@@ -59,9 +45,8 @@ public class DebugGuardian {
      */
     public DebugGuardian(IEventBus modEventBus, ModContainer container) {
         LOGGER.info("DebugGuardian initialized; starting monitors");
-        // Register mod setup and creative tabs
+        // Register mod setup
         modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(this::addCreative);
 
         // Register global events
         NeoForge.EVENT_BUS.register(this);
@@ -83,10 +68,6 @@ public class DebugGuardian {
         GcPauseMonitor.start();
         WorldHangDetector.start();
         ForceCloseDetector.start();
-
-    }
-
-    private void addCreative(BuildCreativeModeTabContentsEvent event) {
 
     }
 
