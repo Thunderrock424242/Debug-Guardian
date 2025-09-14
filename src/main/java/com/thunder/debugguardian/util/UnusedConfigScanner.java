@@ -8,12 +8,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.neoforged.fml.loading.FMLPaths;
 
 import static com.thunder.debugguardian.DebugGuardian.LOGGER;
 
 public class UnusedConfigScanner {
 
-    private static final Path CONFIG_FOLDER = Path.of("config");
+    private static final Path CONFIG_FOLDER = FMLPaths.CONFIGDIR.get();
     private static final Pattern MODID_PATTERN = Pattern.compile("^([a-z0-9_\\-]+)-(client|server|common)?\\.toml$");
 
     public static void scanForUnusedConfigs(MinecraftServer server) {

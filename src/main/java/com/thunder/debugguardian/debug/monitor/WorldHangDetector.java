@@ -4,6 +4,7 @@ import com.thunder.debugguardian.DebugGuardian;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -59,6 +60,11 @@ public class WorldHangDetector {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post evt) {
         lastTick = System.currentTimeMillis();
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        EXECUTOR.shutdownNow();
     }
 
     private static void checkHang() {
