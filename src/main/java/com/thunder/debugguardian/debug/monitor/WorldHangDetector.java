@@ -45,10 +45,20 @@ public class WorldHangDetector {
 
     private static final Path DUMP_DIR =
             FMLPaths.GAMEDIR.get().resolve("debugguardian");
-  
+
     private static volatile long lastTick = System.currentTimeMillis();
     private static volatile StackTraceElement[] lastStackTrace;
     private static volatile int matchCount;
+    private static final ThreadMXBean BEAN = ManagementFactory.getThreadMXBean();
+    static {
+        if (BEAN.isThreadCpuTimeSupported() && !BEAN.isThreadCpuTimeEnabled()) {
+            try {
+                BEAN.setThreadCpuTimeEnabled(true);
+            } catch (UnsupportedOperationException ignored) {
+            }
+        }
+    }
+    private static volatile long lastCpuTime;
 
     /**
      * Starts periodic checks for an unresponsive server thread.
@@ -60,6 +70,7 @@ public class WorldHangDetector {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post evt) {
         lastTick = System.currentTimeMillis();
+        lastCpuTime = BEAN.getThreadCpuTime(Thread.currentThread().threadId());
     }
 
     @SubscribeEvent
@@ -86,23 +97,38 @@ public class WorldHangDetector {
 
             if (matchCount >= REQUIRED_MATCHES) {
 
-                ThreadMXBean bean = ManagementFactory.getThreadMXBean();
-                ThreadInfo info = bean.getThreadInfo(serverThread.threadId());
+                long nowCpu = BEAN.isThreadCpuTimeSupported() ? BEAN.getThreadCpuTime(serverThread.threadId()) : -1;
+                long cpuDeltaMs = lastCpuTime > 0 && nowCpu >= 0 ? (nowCpu - lastCpuTime) / 1_000_000 : -1;
+                ThreadInfo info = BEAN.getThreadInfo(serverThread.threadId(), Integer.MAX_VALUE);
                 String lock = info != null ? String.valueOf(info.getLockName()) : "unknown";
                 String owner = info != null ? String.valueOf(info.getLockOwnerName()) : "unknown";
+                long ownerId = info != null ? info.getLockOwnerId() : -1;
                 String culprit = ClassLoadingIssueDetector.identifyCulpritMod(stack);
                 StackTraceElement top = stack.length > 0 ? stack[0] : null;
                 StackTraceElement culpritFrame = ClassLoadingIssueDetector.findCulpritFrame(stack);
                 DebugGuardian.LOGGER.warn(
-                        "Server thread {} unresponsive for {} ms; waiting on {} owned by {}; blocked at {} via {} (mod: {})",
-                        serverThread.getState(), elapsed, lock, owner, top, culpritFrame, culprit);
+                        "Server thread {} unresponsive for {} ms (cpu delta {} ms); waiting on {} owned by {}; blocked at {} via {} (mod: {})",
+                        serverThread.getState(), elapsed, cpuDeltaMs, lock, owner, top, culpritFrame, culprit);
+
+                if (ownerId != -1) {
+                    ThreadInfo ownerInfo = BEAN.getThreadInfo(ownerId, Integer.MAX_VALUE);
+                    StackTraceElement[] ownerStack = ownerInfo != null ? ownerInfo.getStackTrace() : null;
+                    if (ownerStack != null && ownerStack.length > 0) {
+                        DebugGuardian.LOGGER.warn("Lock owner {} at {}", owner, ownerStack[0]);
+                        if (DebugGuardian.LOGGER.isDebugEnabled()) {
+                            for (StackTraceElement element : ownerStack) {
+                                DebugGuardian.LOGGER.debug("    owner at {}", element);
+                            }
+                        }
+                    }
+                }
 
                 if (DebugGuardian.LOGGER.isDebugEnabled()) {
                     for (StackTraceElement element : stack) {
                         DebugGuardian.LOGGER.debug("    at {}", element);
                     }
                 }
-                dumpThreads(bean);
+                dumpThreads(BEAN);
 
                 matchCount = 0;
                 lastStackTrace = null;
@@ -123,6 +149,13 @@ public class WorldHangDetector {
         return null;
     }
 
+    private static boolean isFrameworkClass(StackTraceElement e) {
+        String cn = e.getClassName();
+        return cn.startsWith("java.") || cn.startsWith("javax.") ||
+                cn.startsWith("sun.") || cn.startsWith("com.sun.") ||
+                cn.startsWith("jdk.");
+    }
+
     private static void dumpThreads(ThreadMXBean bean) {
         try {
             Files.createDirectories(DUMP_DIR);
@@ -132,11 +165,30 @@ public class WorldHangDetector {
             try (BufferedWriter writer = Files.newBufferedWriter(file,
                     StandardOpenOption.CREATE_NEW)) {
                 for (ThreadInfo info : bean.dumpAllThreads(true, true)) {
-                    writer.write(info.toString());
+                    StackTraceElement[] stack = info.getStackTrace();
+                    boolean hasAppFrame = false;
+                    for (StackTraceElement frame : stack) {
+                        if (!isFrameworkClass(frame)) {
+                            hasAppFrame = true;
+                            break;
+                        }
+                    }
+                    if (!hasAppFrame) {
+                        continue;
+                    }
+                    writer.write("\"" + info.getThreadName() + "\" id=" +
+                            info.getThreadId() + " state=" + info.getThreadState());
+                    writer.newLine();
+                    for (StackTraceElement frame : stack) {
+                        if (!isFrameworkClass(frame)) {
+                            writer.write("\tat " + frame);
+                            writer.newLine();
+                        }
+                    }
                     writer.newLine();
                 }
             }
-            DebugGuardian.LOGGER.warn("Thread dump written to {}", file);
+            DebugGuardian.LOGGER.warn("Filtered thread dump written to {}", file);
         } catch (IOException e) {
             DebugGuardian.LOGGER.error("Failed to write thread dump", e);
         }
