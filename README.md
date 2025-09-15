@@ -31,6 +31,10 @@ Completions API. It first reads the API key from the `logging.aiServiceApiKey`
 config entry, then falls back to `DEBUG_GUARDIAN_AI_KEY`. If neither is
 supplied it invokes the heuristic analyzer instead.
 
+Runtime monitors like `GcPauseMonitor`, `WorldHangDetector`, and the new
+`MemoryLeakMonitor` provide proactive warnings about server health, catching
+issues such as long GC pauses, hung ticks, or sustained high heap usage.
+
 Mapping Names:
 ============
 By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 

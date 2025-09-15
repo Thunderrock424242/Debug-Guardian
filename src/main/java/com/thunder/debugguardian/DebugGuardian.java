@@ -10,6 +10,7 @@ import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
+import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.neoforged.bus.api.IEventBus;
@@ -68,6 +69,7 @@ public class DebugGuardian {
         GcPauseMonitor.start();
         WorldHangDetector.start();
         ForceCloseDetector.start();
+        MemoryLeakMonitor.start();
 
     }
 
