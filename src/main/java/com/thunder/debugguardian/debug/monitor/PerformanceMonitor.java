@@ -57,7 +57,7 @@ public class PerformanceMonitor {
         double used = mem.getHeapMemoryUsage().getUsed();
         double max = mem.getHeapMemoryUsage().getMax();
         if (used / max > DebugConfig.get().performanceMemoryWarningRatio) {
-            DebugGuardian.LOGGER.warn("Memory usage high: " + (used / max * 100) + "%");
+            DebugGuardian.LOGGER.warn("Memory usage high: {}%", used / max * 100);
         }
     }
 

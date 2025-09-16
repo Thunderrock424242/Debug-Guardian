@@ -19,7 +19,7 @@ import java.util.Map;
  * Registers a shutdown hook that captures thread stacks when the game is
  * forcibly closed. The stacks are analysed to identify potential mod culprits
  * and written to a timestamped log file for later inspection.
- *
+ * <p>
  * Optionally launches a helper JVM process when enabled via config to allow
  * deeper debugging or attachment of external tools.
  */

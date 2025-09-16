@@ -20,7 +20,7 @@ public class ErrorTracker extends AbstractFilter {
             int count = c.incrementAndGet();
             int interval = DebugConfig.get().loggingErrorReportInterval;
             if (count % interval == 1) {
-                DebugGuardian.LOGGER.error("[DebugGuardian] Error (" + fp + ") occurred " + count + " time(s)", event.getThrown());
+                DebugGuardian.LOGGER.error("[DebugGuardian] Error ({}) occurred {} time(s)", fp, count, event.getThrown());
                 return Filter.Result.ACCEPT;
             }
             return Filter.Result.DENY;
