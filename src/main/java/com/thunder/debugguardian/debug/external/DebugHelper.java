@@ -31,6 +31,10 @@ import java.util.stream.Collectors;
  */
 public class DebugHelper {
 
+    private static final int FILE_READY_RETRY_COUNT = 50;
+    private static final long FILE_READY_SLEEP_MS = 100;
+    private static final int FILE_READY_STABLE_READS = 2;
+
     // ThreadReport is defined as a top-level record to allow external analyzers
     // to operate on the parsed data.
 
@@ -99,7 +103,7 @@ public class DebugHelper {
 
     private static List<ThreadReport> parseDump(Path file) throws IOException {
         List<ThreadReport> threads = new ArrayList<>();
-        List<String> lines = Files.readAllLines(file);
+        List<String> lines = readAllLinesWhenReady(file);
         String currentThread = null;
         String currentMod = null;
         String currentState = null;
@@ -158,10 +162,65 @@ public class DebugHelper {
         return threads;
     }
 
+    private static List<String> readAllLinesWhenReady(Path file) throws IOException {
+        long previousSize = -1L;
+        int stableIterations = 0;
+        IOException lastException = null;
+
+        for (int i = 0; i < FILE_READY_RETRY_COUNT; i++) {
+            if (Files.exists(file)) {
+                long size;
+                try {
+                    size = Files.size(file);
+                } catch (IOException e) {
+                    lastException = e;
+                    size = -1L;
+                }
+
+                if (size > 0 && size == previousSize) {
+                    stableIterations++;
+                    if (stableIterations >= FILE_READY_STABLE_READS) {
+                        try {
+                            return Files.readAllLines(file);
+                        } catch (IOException e) {
+                            lastException = e;
+                            stableIterations = 0;
+                        }
+                    }
+                } else {
+                    stableIterations = 0;
+                }
+
+                previousSize = size;
+            }
+
+            try {
+                Thread.sleep(FILE_READY_SLEEP_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for dump file to be written", e);
+            }
+        }
+
+        if (Files.exists(file)) {
+            return Files.readAllLines(file);
+        }
+
+        if (lastException != null) {
+            throw lastException;
+        }
+
+        throw new IOException("Dump file " + file + " not found");
+    }
+
     private static void writeSummary(Path dir, List<ThreadReport> report, String ts) throws IOException {
         List<String> lines = new ArrayList<>();
-        for (ThreadReport tr : report) {
-            lines.add(tr.thread() + " - " + tr.mod() + " [" + tr.state() + "] (" + tr.stack().size() + " frames)");
+        if (report.isEmpty()) {
+            lines.add("No threads were parsed from the force-close dump.");
+        } else {
+            for (ThreadReport tr : report) {
+                lines.add(tr.thread() + " - " + tr.mod() + " [" + tr.state() + "] (" + tr.stack().size() + " frames)");
+            }
         }
         Path summary = dir.resolve("summary-" + ts + ".txt");
         Files.write(summary, lines);
@@ -169,12 +228,17 @@ public class DebugHelper {
     }
 
     private static void writeSuspects(Path dir, List<ThreadReport> report, String ts) throws IOException {
-        Map<String, Long> counts = report.stream()
-                .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
-        List<String> lines = counts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .map(e -> e.getKey() + " - " + e.getValue() + " thread(s)")
-                .toList();
+        List<String> lines;
+        if (report.isEmpty()) {
+            lines = List.of("No suspects could be identified because the dump contained no thread data.");
+        } else {
+            Map<String, Long> counts = report.stream()
+                    .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
+            lines = counts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .map(e -> e.getKey() + " - " + e.getValue() + " thread(s)")
+                    .toList();
+        }
         Path suspects = dir.resolve("suspects-" + ts + ".txt");
         Files.write(suspects, lines);
         System.out.println("Suspects written to " + suspects);
