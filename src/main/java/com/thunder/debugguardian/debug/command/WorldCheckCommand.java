@@ -108,18 +108,34 @@ public final class WorldCheckCommand {
             String summary = defaultStatus;
             try {
                 List<String> lines = Files.readAllLines(reportFile);
+                String statusText = null;
+                String summaryCounts = null;
+                String firstDetail = null;
                 for (String line : lines) {
-                    if (line.startsWith("Status:")) {
-                        summary = line.substring("Status:".length()).trim();
+                    if (statusText == null && line.startsWith("Status:")) {
+                        statusText = line.substring("Status:".length()).trim();
+                    } else if (summaryCounts == null && line.startsWith("Summary:")) {
+                        summaryCounts = line.substring("Summary:".length()).trim();
+                    } else if (firstDetail == null && line.startsWith(" - ")) {
+                        firstDetail = line.substring(3).trim();
+                    }
+
+                    if (statusText != null && summaryCounts != null && firstDetail != null) {
                         break;
                     }
                 }
-                for (String line : lines) {
-                    if (line.startsWith(" - ")) {
-                        summary = summary + " (" + line.substring(3) + ")";
-                        break;
-                    }
+
+                StringBuilder builder = new StringBuilder(summary);
+                if (statusText != null && !statusText.isEmpty()) {
+                    builder.append(" (Status: ").append(statusText).append(")");
                 }
+                if (summaryCounts != null && !summaryCounts.isEmpty()) {
+                    builder.append(" (").append(summaryCounts).append(")");
+                }
+                if (firstDetail != null && !firstDetail.isEmpty()) {
+                    builder.append(" (").append(firstDetail).append(")");
+                }
+                summary = builder.toString();
             } catch (IOException e) {
                 DebugGuardian.LOGGER.warn("Failed to read world check report", e);
             }
