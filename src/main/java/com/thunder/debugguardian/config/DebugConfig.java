@@ -59,6 +59,10 @@ public class DebugConfig {
             .comment("Launch a helper JVM alongside the game for deeper debugging")
             .define("debug.forceClose.launchHelper", false);
 
+    public static final ModConfigSpec.BooleanValue FORCE_CLOSE_INCLUDE_JAVA_BASE = BUILDER
+            .comment("Include java.base module frames in force-close thread dumps")
+            .define("debug.forceClose.includeJavaBase", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 
@@ -73,6 +77,7 @@ public class DebugConfig {
     public final int loggingErrorReportInterval;
     public final boolean forceCloseEnable;
     public final boolean forceCloseLaunchHelper;
+    public final boolean forceCloseIncludeJavaBase;
 
     private DebugConfig() {
         this.postmortemBufferSize = POSTMORTEM_BUFFER_SIZE.get();
@@ -85,6 +90,7 @@ public class DebugConfig {
         this.loggingErrorReportInterval = LOGGING_ERROR_REPORT_INTERVAL.get();
         this.forceCloseEnable = FORCE_CLOSE_ENABLE.get();
         this.forceCloseLaunchHelper = FORCE_CLOSE_LAUNCH_HELPER.get();
+        this.forceCloseIncludeJavaBase = FORCE_CLOSE_INCLUDE_JAVA_BASE.get();
     }
 
     public static DebugConfig get() {
