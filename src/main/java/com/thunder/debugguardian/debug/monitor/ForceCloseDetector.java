@@ -47,6 +47,8 @@ public class ForceCloseDetector {
     }
 
     private static void dumpStacks() {
+        DebugConfig cfg = DebugConfig.get();
+        boolean includeJavaBase = cfg.forceCloseIncludeJavaBase;
         try {
             Files.createDirectories(DUMP_DIR);
             String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -60,6 +62,9 @@ public class ForceCloseDetector {
                     writer.write("Thread: " + t.getName() + " mod: " + mod + " state: " + t.getState());
                     writer.newLine();
                     for (StackTraceElement ste : stack) {
+                        if (!includeJavaBase && isJavaBaseFrame(ste)) {
+                            continue;
+                        }
                         writer.write("    at " + ste);
                         writer.newLine();
                     }
@@ -70,6 +75,15 @@ public class ForceCloseDetector {
         } catch (IOException e) {
             DebugGuardian.LOGGER.error("Failed to write force-close dump", e);
         }
+    }
+
+    private static boolean isJavaBaseFrame(StackTraceElement ste) {
+        String module = ste.getModuleName();
+        if (module != null && module.equals("java.base")) {
+            return true;
+        }
+        String repr = ste.toString();
+        return repr.startsWith("java.base/");
     }
 
     private static void launchHelper() {
