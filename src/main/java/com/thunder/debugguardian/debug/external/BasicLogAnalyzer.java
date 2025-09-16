@@ -100,7 +100,7 @@ public class BasicLogAnalyzer implements LogAnalyzer {
         String mod = sanitizeMod(report.mod());
         String state = sanitizeState(report.state());
         List<String> stack = report.stack();
-        String topFrame = stack.isEmpty() ? "unknown" : normalizeFrame(stack.get(0));
+        String topFrame = stack.isEmpty() ? "unknown" : normalizeFrame(stack.getFirst());
         String interestingFrame = findInterestingFrame(stack);
         boolean mainThread = isMainThread(report.thread());
         double score = computeScore(mod, state, stack.size(), interestingFrame, mainThread);
