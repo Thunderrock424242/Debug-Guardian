@@ -47,7 +47,8 @@ public class BasicLogAnalyzer implements LogAnalyzer {
     @Override
     public String analyze(List<ThreadReport> threads) {
         if (threads.isEmpty()) {
-            return "No thread information available.";
+            return "No thread data was parsed from the force-close dump. "
+                    + "The log may have been empty or still being written when it was read.";
         }
 
         List<ThreadInsight> insights = threads.stream()
