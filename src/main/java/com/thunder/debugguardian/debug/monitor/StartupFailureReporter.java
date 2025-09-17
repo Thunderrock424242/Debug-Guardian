@@ -18,5 +18,10 @@ public class StartupFailureReporter implements Thread.UncaughtExceptionHandler {
         if (!"Unknown".equals(culprit)) {
             DebugGuardian.LOGGER.error("Startup crash likely caused by mod {}", culprit);
         }
+        CrashRiskMonitor.recordSymptom(
+                "startup-crash",
+                CrashRiskMonitor.Severity.CRITICAL,
+                "Startup crash detected" + ("Unknown".equals(culprit) ? "" : " (" + culprit + ")")
+        );
     }
 }

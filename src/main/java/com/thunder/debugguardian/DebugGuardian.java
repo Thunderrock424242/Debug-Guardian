@@ -2,15 +2,16 @@ package com.thunder.debugguardian;
 
 import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.Watchdog;
+import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import com.thunder.debugguardian.debug.monitor.ForceCloseDetector;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
+import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
-import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.neoforged.bus.api.IEventBus;
@@ -61,6 +62,7 @@ public class DebugGuardian {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        CrashRiskMonitor.start();
         LiveLogMonitor.start();
         PerformanceMonitor.init();
         PostMortemRecorder.init();
@@ -81,6 +83,7 @@ public class DebugGuardian {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         Watchdog.stop();
+        CrashRiskMonitor.stop();
     }
 }
 

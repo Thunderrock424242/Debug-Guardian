@@ -63,6 +63,16 @@ public class DebugConfig {
             .comment("Include java.base module frames in force-close thread dumps")
             .define("debug.forceClose.includeJavaBase", true);
 
+    // Crash Risk Monitor Settings
+    public static final ModConfigSpec.BooleanValue CRASH_RISK_ENABLE = BUILDER
+            .comment("Enable aggregated crash risk detection")
+            .define("debug.crashRisk.enable", true);
+
+    // World Integrity Monitoring Settings
+    public static final ModConfigSpec.BooleanValue WORLD_AUTO_SCAN_ON_START = BUILDER
+            .comment("Automatically scan the active world for issues when the server starts")
+            .define("world.autoScanOnStart", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
 
@@ -78,6 +88,8 @@ public class DebugConfig {
     public final boolean forceCloseEnable;
     public final boolean forceCloseLaunchHelper;
     public final boolean forceCloseIncludeJavaBase;
+    public final boolean crashRiskEnable;
+    public final boolean worldAutoScanOnStart;
 
     private DebugConfig() {
         this.postmortemBufferSize = POSTMORTEM_BUFFER_SIZE.get();
@@ -91,6 +103,8 @@ public class DebugConfig {
         this.forceCloseEnable = FORCE_CLOSE_ENABLE.get();
         this.forceCloseLaunchHelper = FORCE_CLOSE_LAUNCH_HELPER.get();
         this.forceCloseIncludeJavaBase = FORCE_CLOSE_INCLUDE_JAVA_BASE.get();
+        this.crashRiskEnable = CRASH_RISK_ENABLE.get();
+        this.worldAutoScanOnStart = WORLD_AUTO_SCAN_ON_START.get();
     }
 
     public static DebugConfig get() {

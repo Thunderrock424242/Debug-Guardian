@@ -122,11 +122,22 @@ public class LiveLogMonitor {
                         ? ""
                         : "\n§7(requested by: " + culprit + ")");
                 notifyPlayer(msg, adviceMsg, buildReportUrl());
+                CrashRiskMonitor.recordSymptom(
+                        "log-" + matchedKey,
+                        severityForKey(matchedKey),
+                        classification + (culprit.isEmpty() ? "" : " (" + culprit + ")")
+                );
             }
             else if (event.getLevel().isMoreSpecificThan(
                     org.apache.logging.log4j.Level.ERROR)) {
                 write("[UNCLASSIFIED] ["
                         + Instant.now() + "] " + msg);
+                String snippet = msg.length() > 120 ? msg.substring(0, 117) + "..." : msg;
+                CrashRiskMonitor.recordSymptom(
+                        "log-unclassified",
+                        CrashRiskMonitor.Severity.MEDIUM,
+                        "Unclassified error: " + snippet
+                );
             }
         }
     }
@@ -139,6 +150,21 @@ public class LiveLogMonitor {
             System.err.println("[Debug Guardian] Failed writing runtime log: "
                     + e.getMessage());
         }
+    }
+
+    private static CrashRiskMonitor.Severity severityForKey(String key) {
+        if (key == null) {
+            return CrashRiskMonitor.Severity.MEDIUM;
+        }
+        return switch (key) {
+            case "OutOfMemoryError", "Exception in server tick loop", "Missing registry",
+                    "Failed to save chunk" -> CrashRiskMonitor.Severity.CRITICAL;
+            case "ClassNotFoundException", "NoClassDefFoundError", "Mixin apply failed",
+                    "Registry remapping failed" -> CrashRiskMonitor.Severity.HIGH;
+            case "Failed to handle handshake", "Resource reload failed", "Invalid config" ->
+                    CrashRiskMonitor.Severity.MEDIUM;
+            default -> CrashRiskMonitor.Severity.MEDIUM;
+        };
     }
 
     private static void notifyPlayer(String logLine, String advice,
@@ -178,6 +204,11 @@ public class LiveLogMonitor {
                 "A fatal error occurred; see log for details.\n§7(requested by: "
                         + culprit + ")",
                 buildReportUrl()
+        );
+        CrashRiskMonitor.recordSymptom(
+                "log-crash-" + thrown.getClass().getSimpleName(),
+                CrashRiskMonitor.Severity.CRITICAL,
+                "Uncaught exception: " + shortMsg
         );
     }
 

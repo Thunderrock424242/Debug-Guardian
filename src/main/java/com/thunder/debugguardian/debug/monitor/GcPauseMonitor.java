@@ -1,6 +1,7 @@
 package com.thunder.debugguardian.debug.monitor;
 
 import com.thunder.debugguardian.DebugGuardian;
+import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -23,6 +24,11 @@ public class GcPauseMonitor {
             long delta = totalGc - lastGcTime;
             if (lastGcTime != 0 && delta > PAUSE_WARN_MS) {
                 DebugGuardian.LOGGER.warn("Long GC pause detected: {} ms", delta);
+                CrashRiskMonitor.recordSymptom(
+                        "gc-pause",
+                        delta > 5_000 ? CrashRiskMonitor.Severity.HIGH : CrashRiskMonitor.Severity.MEDIUM,
+                        "GC pause lasted " + delta + " ms"
+                );
             }
             lastGcTime = totalGc;
         }, 10, 10, TimeUnit.SECONDS);

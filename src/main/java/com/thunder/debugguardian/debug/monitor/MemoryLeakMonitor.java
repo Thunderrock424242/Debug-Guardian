@@ -34,6 +34,11 @@ public class MemoryLeakMonitor {
                         "Possible memory leak: heap usage at {}% for {} checks",
                         Math.round(ratio * 100), highUsageStreak
                 );
+                CrashRiskMonitor.recordSymptom(
+                        "memory-leak",
+                        CrashRiskMonitor.Severity.HIGH,
+                        "Heap usage > " + Math.round(ratio * 100) + "% for " + highUsageStreak + " checks"
+                );
             }
         } else {
             if (highUsageStreak > 0) {
