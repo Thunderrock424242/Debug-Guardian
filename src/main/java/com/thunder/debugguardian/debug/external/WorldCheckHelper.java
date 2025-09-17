@@ -40,11 +40,18 @@ public final class WorldCheckHelper {
 
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
+        InspectionState inspectionState = new InspectionState();
 
         if (!Files.isDirectory(worldDir)) {
             errors.add("World directory does not exist or is not a directory: " + worldDir.toAbsolutePath());
         } else {
-            inspectWorld(worldDir, warnings, errors);
+            inspectWorld(worldDir, warnings, errors, inspectionState);
+        }
+
+        boolean brandNewWorld = errors.isEmpty() && inspectionState.isBrandNewWorld();
+        if (brandNewWorld) {
+            inspectionState.removeNewWorldWarnings(warnings);
+            brandNewWorld = warnings.isEmpty();
         }
 
         String status = errors.isEmpty() ? (warnings.isEmpty() ? "OK" : "WARNINGS") : "ERRORS";
@@ -69,7 +76,11 @@ public final class WorldCheckHelper {
         }
 
         if (errors.isEmpty() && warnings.isEmpty()) {
-            report.add("No problems were detected.");
+            if (brandNewWorld) {
+                report.add("This world appears to be newly generated; no errors have been found yet.");
+            } else {
+                report.add("No problems were detected.");
+            }
             report.add("");
         }
 
@@ -95,38 +106,46 @@ public final class WorldCheckHelper {
         }
     }
 
-    private static void inspectWorld(Path worldDir, List<String> warnings, List<String> errors) {
+    private static void inspectWorld(Path worldDir, List<String> warnings, List<String> errors, InspectionState inspectionState) {
         Path levelDat = worldDir.resolve("level.dat");
         Path sessionLock = worldDir.resolve("session.lock");
         Path levelDatOld = worldDir.resolve("level.dat_old");
 
-        checkFile(levelDat, "level.dat", true, warnings, errors);
+        checkFile(levelDat, "level.dat", true, false, inspectionState, warnings, errors);
         validateCompressedNbt(levelDat, "level.dat", true, warnings, errors);
 
-        checkFile(sessionLock, "session.lock", false, warnings, errors);
+        checkFile(sessionLock, "session.lock", false, false, inspectionState, warnings, errors);
 
-        checkFile(levelDatOld, "level.dat_old", false, warnings, errors);
+        checkFile(levelDatOld, "level.dat_old", false, true, inspectionState, warnings, errors);
         validateCompressedNbt(levelDatOld, "level.dat_old", false, warnings, errors);
 
-        checkRegionDirectory(worldDir.resolve("region"), "Overworld", warnings, errors);
-        checkRegionDirectory(worldDir.resolve("DIM-1").resolve("region"), "The Nether", warnings, errors);
-        checkRegionDirectory(worldDir.resolve("DIM1").resolve("region"), "The End", warnings, errors);
+        checkRegionDirectory(worldDir.resolve("region"), "Overworld", inspectionState, warnings, errors);
+        checkRegionDirectory(worldDir.resolve("DIM-1").resolve("region"), "The Nether", inspectionState, warnings, errors);
+        checkRegionDirectory(worldDir.resolve("DIM1").resolve("region"), "The End", inspectionState, warnings, errors);
 
-        inspectCustomDimensions(worldDir.resolve("dimensions"), warnings, errors);
+        inspectCustomDimensions(worldDir.resolve("dimensions"), inspectionState, warnings, errors);
 
-        checkPlayerData(worldDir.resolve("playerdata"), warnings, errors);
+        checkPlayerData(worldDir.resolve("playerdata"), inspectionState, warnings, errors);
         checkPoiDirectory(worldDir.resolve("poi"), "Overworld", warnings);
         checkPoiDirectory(worldDir.resolve("DIM-1").resolve("poi"), "The Nether", warnings);
         checkPoiDirectory(worldDir.resolve("DIM1").resolve("poi"), "The End", warnings);
     }
 
-    private static void checkFile(Path file, String description, boolean critical, List<String> warnings, List<String> errors) {
+    private static void checkFile(
+            Path file,
+            String description,
+            boolean critical,
+            boolean missingIsNormalForNewWorld,
+            InspectionState inspectionState,
+            List<String> warnings,
+            List<String> errors
+    ) {
         if (Files.notExists(file)) {
             String message = description + " is missing (" + file.toAbsolutePath() + ")";
             if (critical) {
                 errors.add(message);
             } else {
-                warnings.add(message);
+                addWarning(message, missingIsNormalForNewWorld, inspectionState, warnings);
             }
             return;
         }
@@ -138,7 +157,7 @@ public final class WorldCheckHelper {
                 if (critical) {
                     errors.add(message);
                 } else {
-                    warnings.add(message);
+                    addWarning(message, missingIsNormalForNewWorld, inspectionState, warnings);
                 }
             }
         } catch (IOException e) {
@@ -146,14 +165,19 @@ public final class WorldCheckHelper {
             if (critical) {
                 errors.add(message);
             } else {
-                warnings.add(message);
+                addWarning(message, missingIsNormalForNewWorld, inspectionState, warnings);
             }
         }
     }
 
-    private static void checkRegionDirectory(Path dir, String label, List<String> warnings, List<String> errors) {
+    private static void checkRegionDirectory(Path dir, String label, InspectionState inspectionState, List<String> warnings, List<String> errors) {
         if (Files.notExists(dir)) {
-            warnings.add(label + " has no region directory (" + dir.toAbsolutePath() + "); no chunks may have been generated yet.");
+            addWarning(
+                    label + " has no region directory (" + dir.toAbsolutePath() + "); no chunks may have been generated yet.",
+                    true,
+                    inspectionState,
+                    warnings
+            );
             return;
         }
 
@@ -171,6 +195,7 @@ public final class WorldCheckHelper {
                 String name = entry.getFileName().toString();
                 if (name.endsWith(".mca")) {
                     regionFiles++;
+                    inspectionState.markChunkDataFound();
                     inspectRegionFile(entry, label, warnings, errors);
                 } else if (name.endsWith(".mcc") || name.endsWith(".tmp")) {
                     warnings.add(label + " region contains stray file " + name + " (" + entry.toAbsolutePath() + ")");
@@ -182,7 +207,12 @@ public final class WorldCheckHelper {
         }
 
         if (regionFiles == 0) {
-            warnings.add(label + " region directory contains no .mca files (" + dir.toAbsolutePath() + ")");
+            addWarning(
+                    label + " region directory contains no .mca files (" + dir.toAbsolutePath() + ")",
+                    true,
+                    inspectionState,
+                    warnings
+            );
         }
     }
 
@@ -209,7 +239,7 @@ public final class WorldCheckHelper {
         validateRegionHeader(file, label, size, warnings, errors);
     }
 
-    private static void inspectCustomDimensions(Path dimensionsDir, List<String> warnings, List<String> errors) {
+    private static void inspectCustomDimensions(Path dimensionsDir, InspectionState inspectionState, List<String> warnings, List<String> errors) {
         if (Files.notExists(dimensionsDir)) {
             return;
         }
@@ -230,7 +260,7 @@ public final class WorldCheckHelper {
                             continue;
                         }
                         String label = "Dimension " + dimensionsDir.relativize(dim).toString().replace('\\', '/');
-                        checkRegionDirectory(dim.resolve("region"), label, warnings, errors);
+                        checkRegionDirectory(dim.resolve("region"), label, inspectionState, warnings, errors);
                         checkPoiDirectory(dim.resolve("poi"), label, warnings);
                     }
                 }
@@ -240,7 +270,7 @@ public final class WorldCheckHelper {
         }
     }
 
-    private static void checkPlayerData(Path dir, List<String> warnings, List<String> errors) {
+    private static void checkPlayerData(Path dir, InspectionState inspectionState, List<String> warnings, List<String> errors) {
         if (Files.notExists(dir)) {
             return;
         }
@@ -254,6 +284,7 @@ public final class WorldCheckHelper {
             for (Path entry : stream) {
                 try {
                     long size = Files.size(entry);
+                    inspectionState.markPlayerDataFound();
                     if (size == 0L) {
                         warnings.add("Player data file " + entry.getFileName() + " is empty");
                     }
@@ -291,6 +322,13 @@ public final class WorldCheckHelper {
             }
         } catch (IOException e) {
             warnings.add("Failed to inspect POI directory for " + label + ": " + e.getMessage());
+        }
+    }
+
+    private static void addWarning(String message, boolean newWorldIndicator, InspectionState inspectionState, List<String> warnings) {
+        warnings.add(message);
+        if (newWorldIndicator) {
+            inspectionState.registerNewWorldWarning(message);
         }
     }
 
@@ -391,6 +429,36 @@ public final class WorldCheckHelper {
             }
         } catch (IOException e) {
             warnings.add("Failed to read region header for " + label + " file " + file.getFileName() + ": " + e.getMessage());
+        }
+    }
+
+    private static final class InspectionState {
+        private boolean chunkDataFound;
+        private boolean playerDataFound;
+        private final List<String> newWorldWarnings = new ArrayList<>();
+
+        void markChunkDataFound() {
+            this.chunkDataFound = true;
+        }
+
+        void markPlayerDataFound() {
+            this.playerDataFound = true;
+        }
+
+        void registerNewWorldWarning(String message) {
+            this.newWorldWarnings.add(message);
+        }
+
+        void removeNewWorldWarnings(List<String> warnings) {
+            for (String message : newWorldWarnings) {
+                while (warnings.remove(message)) {
+                    // remove every occurrence
+                }
+            }
+        }
+
+        boolean isBrandNewWorld() {
+            return !chunkDataFound && !playerDataFound;
         }
     }
 }
