@@ -109,6 +109,11 @@ public class WorldHangDetector {
                 DebugGuardian.LOGGER.warn(
                         "Server thread {} unresponsive for {} ms (cpu delta {} ms); waiting on {} owned by {}; blocked at {} via {} (mod: {})",
                         serverThread.getState(), elapsed, cpuDeltaMs, lock, owner, top, culpritFrame, culprit);
+                CrashRiskMonitor.recordSymptom(
+                        "world-hang",
+                        CrashRiskMonitor.Severity.CRITICAL,
+                        "Server thread blocked for " + elapsed + " ms (culprit: " + culprit + ")"
+                );
 
                 if (ownerId != -1) {
                     ThreadInfo ownerInfo = BEAN.getThreadInfo(ownerId, Integer.MAX_VALUE);

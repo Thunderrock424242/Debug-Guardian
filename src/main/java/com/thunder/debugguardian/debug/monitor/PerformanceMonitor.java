@@ -2,6 +2,7 @@ package com.thunder.debugguardian.debug.monitor;
 
 import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
+import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -90,9 +91,19 @@ public class PerformanceMonitor {
                 DebugGuardian.LOGGER.warn(
                         "Concerning slow tick detected: {} ms", ms
                 );
+                CrashRiskMonitor.recordSymptom(
+                        "performance-slowtick",
+                        CrashRiskMonitor.Severity.MEDIUM,
+                        "Tick duration spiked to " + ms + " ms"
+                );
             } else if (slowTickCount % SLOW_TICK_WARN_INTERVAL == 0) {
                 DebugGuardian.LOGGER.warn(
                         "Still slow for {} consecutive ticks; last tick {} ms", slowTickCount, ms
+                );
+                CrashRiskMonitor.recordSymptom(
+                        "performance-slowtick",
+                        CrashRiskMonitor.Severity.HIGH,
+                        slowTickCount + " consecutive slow ticks (" + ms + " ms)"
                 );
             }
         } else if (slowTickCount > 0) {

@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.thunder.debugguardian.DebugGuardian.LOGGER;
 
+import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
+
 public class Watchdog {
 
     private static final int MAX_THREADS = 300;
@@ -32,10 +34,20 @@ public class Watchdog {
 
             if (usedMB > MAX_MEMORY_MB) {
                 LOGGER.warn("⚠ High memory usage detected: {} MB", usedMB);
+                CrashRiskMonitor.recordSymptom(
+                        "watchdog-memory",
+                        CrashRiskMonitor.Severity.HIGH,
+                        "Heap usage exceeded " + MAX_MEMORY_MB + " MB (" + usedMB + " MB)"
+                );
             }
 
             if (threadCount > MAX_THREADS) {
                 LOGGER.warn("⚠ High thread count detected: {} threads", threadCount);
+                CrashRiskMonitor.recordSymptom(
+                        "watchdog-threads",
+                        CrashRiskMonitor.Severity.MEDIUM,
+                        "Thread count exceeded " + MAX_THREADS + " (" + threadCount + ")"
+                );
             }
         }, 10, 10, TimeUnit.SECONDS); // check every 10 seconds
     }
