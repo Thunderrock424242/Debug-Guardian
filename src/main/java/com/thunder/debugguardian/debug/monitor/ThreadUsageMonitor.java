@@ -29,6 +29,13 @@ public class ThreadUsageMonitor {
             if (e.getValue() > THREAD_THRESHOLD && !"Unknown".equals(e.getKey())) {
                 DebugGuardian.LOGGER.warn(
                         "Mod {} is using {} threads", e.getKey(), e.getValue());
+                CrashRiskMonitor.recordSymptom(
+                        "threads-" + e.getKey(),
+                        e.getValue() > THREAD_THRESHOLD * 2
+                                ? CrashRiskMonitor.Severity.HIGH
+                                : CrashRiskMonitor.Severity.MEDIUM,
+                        "Mod " + e.getKey() + " spawned " + e.getValue() + " threads"
+                );
             }
         }
     }

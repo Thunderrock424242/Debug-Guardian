@@ -28,9 +28,19 @@ public class WorldGenFreezeDetector {
                     if (!"Unknown".equals(culprit)) {
                         DebugGuardian.LOGGER.warn(
                                 "Possible worldgen freeze caused by mod {}", culprit);
+                        CrashRiskMonitor.recordSymptom(
+                                "worldgen-freeze",
+                                CrashRiskMonitor.Severity.HIGH,
+                                "World generation hung, suspect mod " + culprit
+                        );
                     } else {
                         DebugGuardian.LOGGER.warn(
                                 "Possible worldgen freeze detected, culprit unknown");
+                        CrashRiskMonitor.recordSymptom(
+                                "worldgen-freeze",
+                                CrashRiskMonitor.Severity.MEDIUM,
+                                "World generation hung without identifiable culprit"
+                        );
                     }
                     worldGenStart = now; // reset to avoid spamming
                 }
