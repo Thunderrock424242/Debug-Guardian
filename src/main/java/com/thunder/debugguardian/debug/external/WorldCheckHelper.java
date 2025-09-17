@@ -38,7 +38,6 @@ public final class WorldCheckHelper {
         Path reportFile = Paths.get(args[1]);
 
         WorldInspectionResult result = WorldIntegrityScanner.scan(worldDir);
-        List<String> report = result.buildReportLines(LocalDateTime.now(), FORMAT);
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         InspectionState inspectionState = new InspectionState();
