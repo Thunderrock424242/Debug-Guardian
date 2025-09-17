@@ -4,13 +4,17 @@ import com.thunder.debugguardian.debug.world.WorldInspectionResult;
 import com.thunder.debugguardian.debug.world.WorldIntegrityScanner;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipException;
 
 /**
  * Helper application launched by the /worldcheck command. It delegates to the
