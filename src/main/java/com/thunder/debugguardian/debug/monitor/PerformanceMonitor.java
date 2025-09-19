@@ -26,13 +26,18 @@ import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 public class PerformanceMonitor {
     private static PerformanceMonitor instance;
     private final Deque<Long> tickTimes = new ArrayDeque<>();
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler;
     private Instant last = Instant.now();
     // tracks consecutive slow ticks
     private int slowTickCount = 0;
     private static final int SLOW_TICK_WARN_INTERVAL = 10;
 
     private PerformanceMonitor() {
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "debugguardian-performance-monitor");
+            t.setDaemon(true);
+            return t;
+        });
         // Schedule memory checks
         scheduler.scheduleAtFixedRate(this::checkMemory, 10, 10, TimeUnit.SECONDS);
     }
@@ -43,6 +48,13 @@ public class PerformanceMonitor {
     public static void init() {
         if (instance == null) {
             instance = new PerformanceMonitor();
+        }
+    }
+
+    public static void shutdown() {
+        if (instance != null) {
+            instance.scheduler.shutdownNow();
+            instance = null;
         }
     }
 
@@ -84,26 +96,27 @@ public class PerformanceMonitor {
             tickTimes.removeFirst();
         }
 
-        // Only warn on ticks exceeding 100ms
-        if (ms > 100) {
+        long threshold = Math.max(1L, DebugConfig.get().performanceTickThresholdMs);
+        if (ms > threshold) {
             slowTickCount++;
             if (slowTickCount == 1) {
                 DebugGuardian.LOGGER.warn(
-                        "Concerning slow tick detected: {} ms", ms
+                        "Concerning slow tick detected: {} ms (threshold {} ms)", ms, threshold
                 );
                 CrashRiskMonitor.recordSymptom(
                         "performance-slowtick",
                         CrashRiskMonitor.Severity.MEDIUM,
-                        "Tick duration spiked to " + ms + " ms"
+                        "Tick duration spiked to " + ms + " ms (threshold " + threshold + " ms)"
                 );
             } else if (slowTickCount % SLOW_TICK_WARN_INTERVAL == 0) {
                 DebugGuardian.LOGGER.warn(
-                        "Still slow for {} consecutive ticks; last tick {} ms", slowTickCount, ms
+                        "Still slow for {} consecutive ticks; last tick {} ms (threshold {} ms)",
+                        slowTickCount, ms, threshold
                 );
                 CrashRiskMonitor.recordSymptom(
                         "performance-slowtick",
                         CrashRiskMonitor.Severity.HIGH,
-                        slowTickCount + " consecutive slow ticks (" + ms + " ms)"
+                        slowTickCount + " consecutive slow ticks (" + ms + " ms, threshold " + threshold + " ms)"
                 );
             }
         } else if (slowTickCount > 0) {

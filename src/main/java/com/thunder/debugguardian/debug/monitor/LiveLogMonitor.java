@@ -3,10 +3,10 @@ package com.thunder.debugguardian.debug.monitor;
 import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.errors.ErrorTracker;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ClickEvent;
+import com.thunder.debugguardian.debug.monitor.client.LogNotificationSender;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -25,6 +25,7 @@ public class LiveLogMonitor {
             FMLPaths.GAMEDIR.get().resolve("logs/runtime_issues.log");
     private static final Set<String> seenErrors = ConcurrentHashMap.newKeySet();
     private static final Map<String, String> errorClassifications = new LinkedHashMap<>();
+    private static final ClientNotifier CLIENT_NOTIFIER;
 
     static {
         errorClassifications.put("Mixin apply failed",
@@ -57,7 +58,17 @@ public class LiveLogMonitor {
                 "Chunk data failed to save; check disk health or mods.");
     }
 
+    static {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            CLIENT_NOTIFIER = LogNotificationSender::notifyPlayer;
+        } else {
+            CLIENT_NOTIFIER = (logLine, advice, reportUrl) -> {
+            };
+        }
+    }
+
     public static void start() {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
         if (!DebugConfig.get().loggingEnableLiveMonitor) return;
         resetLog();
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
@@ -121,7 +132,7 @@ public class LiveLogMonitor {
                         + (culprit.isEmpty()
                         ? ""
                         : "\n§7(requested by: " + culprit + ")");
-                notifyPlayer(msg, adviceMsg, buildReportUrl());
+                sendClientNotification(msg, adviceMsg, buildReportUrl());
                 CrashRiskMonitor.recordSymptom(
                         "log-" + matchedKey,
                         severityForKey(matchedKey),
@@ -167,24 +178,13 @@ public class LiveLogMonitor {
         };
     }
 
-    private static void notifyPlayer(String logLine, String advice,
-                                     String reportUrl) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) return;
-        mc.execute(() -> {
-            mc.player.sendSystemMessage(
-                    Component.literal("§c[Debug Guardian] Detected: " + logLine));
-            mc.player.sendSystemMessage(Component.literal("§6" + advice));
-            mc.player.sendSystemMessage(
-                    Component.literal("§9[Report issue]")
-                            .withStyle(style -> style
-                                    .withClickEvent(
-                                            new ClickEvent(
-                                                    ClickEvent.Action.OPEN_URL, reportUrl))
-                                    .withUnderlined(true)
-                            )
-            );
-        });
+    private static void sendClientNotification(String logLine, String advice, String reportUrl) {
+        CLIENT_NOTIFIER.notify(logLine, advice, reportUrl);
+    }
+
+    @FunctionalInterface
+    private interface ClientNotifier {
+        void notify(String logLine, String advice, String reportUrl);
     }
 
     public static void captureThrowable(Throwable thrown) {
@@ -199,7 +199,7 @@ public class LiveLogMonitor {
 
         String shortMsg = thrown.getClass().getSimpleName()
                 + ": " + thrown.getMessage();
-        notifyPlayer(
+        sendClientNotification(
                 shortMsg,
                 "A fatal error occurred; see log for details.\n§7(requested by: "
                         + culprit + ")",
