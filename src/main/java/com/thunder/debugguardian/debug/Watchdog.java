@@ -10,12 +10,11 @@ import java.util.concurrent.TimeUnit;
 
 import static com.thunder.debugguardian.DebugGuardian.LOGGER;
 
+import com.thunder.debugguardian.config.DebugConfig;
 import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 
 public class Watchdog {
 
-    private static final int MAX_THREADS = 300;
-    private static final long MAX_MEMORY_MB = 8000;
     private static final ScheduledExecutorService EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "DebugGuardian Watchdog");
@@ -24,32 +23,8 @@ public class Watchdog {
             });
 
     public static void start() {
-        EXECUTOR.scheduleAtFixedRate(() -> {
-            MemoryMXBean memBean = ManagementFactory.getMemoryMXBean();
-            MemoryUsage heapUsage = memBean.getHeapMemoryUsage();
-            long usedMB = heapUsage.getUsed() / (1024 * 1024);
-
-            ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-            int threadCount = threadBean.getThreadCount();
-
-            if (usedMB > MAX_MEMORY_MB) {
-                LOGGER.warn("⚠ High memory usage detected: {} MB", usedMB);
-                CrashRiskMonitor.recordSymptom(
-                        "watchdog-memory",
-                        CrashRiskMonitor.Severity.HIGH,
-                        "Heap usage exceeded " + MAX_MEMORY_MB + " MB (" + usedMB + " MB)"
-                );
-            }
-
-            if (threadCount > MAX_THREADS) {
-                LOGGER.warn("⚠ High thread count detected: {} threads", threadCount);
-                CrashRiskMonitor.recordSymptom(
-                        "watchdog-threads",
-                        CrashRiskMonitor.Severity.MEDIUM,
-                        "Thread count exceeded " + MAX_THREADS + " (" + threadCount + ")"
-                );
-            }
-        }, 10, 10, TimeUnit.SECONDS); // check every 10 seconds
+        long interval = Math.max(1, DebugConfig.get().watchdogCheckIntervalSeconds);
+        EXECUTOR.scheduleAtFixedRate(Watchdog::checkResources, interval, interval, TimeUnit.SECONDS);
     }
 
     /**
@@ -57,5 +32,36 @@ public class Watchdog {
      */
     public static void stop() {
         EXECUTOR.shutdownNow();
+    }
+
+    private static void checkResources() {
+        MemoryMXBean memBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapUsage = memBean.getHeapMemoryUsage();
+        long usedMB = heapUsage.getUsed() / (1024 * 1024);
+
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        int threadCount = threadBean.getThreadCount();
+
+        DebugConfig config = DebugConfig.get();
+        long maxMemoryMb = config.watchdogMemoryCapMb;
+        int maxThreads = config.watchdogThreadCap;
+
+        if (usedMB > maxMemoryMb) {
+            LOGGER.warn("⚠ High memory usage detected: {} MB (threshold {} MB)", usedMB, maxMemoryMb);
+            CrashRiskMonitor.recordSymptom(
+                    "watchdog-memory",
+                    CrashRiskMonitor.Severity.HIGH,
+                    "Heap usage exceeded " + maxMemoryMb + " MB (" + usedMB + " MB)"
+            );
+        }
+
+        if (threadCount > maxThreads) {
+            LOGGER.warn("⚠ High thread count detected: {} threads (threshold {})", threadCount, maxThreads);
+            CrashRiskMonitor.recordSymptom(
+                    "watchdog-threads",
+                    CrashRiskMonitor.Severity.MEDIUM,
+                    "Thread count exceeded " + maxThreads + " (" + threadCount + ")"
+            );
+        }
     }
 }

@@ -30,6 +30,41 @@ public class DebugConfig {
             .comment("Heap usage ratio (0.0 - 1.0) to trigger memory warning")
             .defineInRange("performance.memoryWarningRatio", 0.8D, 0.0D, 1.0D);
 
+    // Memory Leak Monitor Settings
+    public static final ModConfigSpec.DoubleValue MEMORY_LEAK_WARN_RATIO = BUILDER
+            .comment("Heap usage ratio (0.0 - 1.0) that increments the leak streak")
+            .defineInRange("monitoring.memoryLeak.warnRatio", 0.9D, 0.0D, 1.0D);
+
+    public static final ModConfigSpec.IntValue MEMORY_LEAK_WARN_STREAK = BUILDER
+            .comment("Number of consecutive checks over the ratio before warning")
+            .defineInRange("monitoring.memoryLeak.warnStreak", 3, 1, 100);
+
+    public static final ModConfigSpec.IntValue MEMORY_LEAK_CHECK_INTERVAL = BUILDER
+            .comment("Seconds between heap usage checks for the leak monitor")
+            .defineInRange("monitoring.memoryLeak.checkIntervalSeconds", 30, 5, 600);
+
+    // GC Pause Monitor Settings
+    public static final ModConfigSpec.LongValue GC_PAUSE_WARN_MS = BUILDER
+            .comment("GC pause duration (ms) considered suspicious")
+            .defineInRange("monitoring.gc.pauseWarnMs", 2_000L, 100L, 60_000L);
+
+    public static final ModConfigSpec.IntValue GC_PAUSE_CHECK_INTERVAL = BUILDER
+            .comment("Seconds between GC pause measurements")
+            .defineInRange("monitoring.gc.checkIntervalSeconds", 10, 1, 600);
+
+    // Watchdog Settings
+    public static final ModConfigSpec.LongValue WATCHDOG_MEMORY_CAP_MB = BUILDER
+            .comment("Heap usage (in MB) that triggers a watchdog warning")
+            .defineInRange("monitoring.watchdog.maxMemoryMb", 8_000L, 512L, 65_536L);
+
+    public static final ModConfigSpec.IntValue WATCHDOG_THREAD_CAP = BUILDER
+            .comment("Thread count that triggers a watchdog warning")
+            .defineInRange("monitoring.watchdog.maxThreads", 300, 32, 10_000);
+
+    public static final ModConfigSpec.IntValue WATCHDOG_CHECK_INTERVAL = BUILDER
+            .comment("Seconds between watchdog resource checks")
+            .defineInRange("monitoring.watchdog.checkIntervalSeconds", 10, 1, 600);
+
     // Compatibility Scanner Settings
     public static final ModConfigSpec.BooleanValue COMPAT_ENABLE_SCAN = BUILDER
             .comment("Enable scanning for known mod incompatibilities at startup")
@@ -81,6 +116,14 @@ public class DebugConfig {
     public final String reportingGithubRepository;
     public final long performanceTickThresholdMs;
     public final double performanceMemoryWarningRatio;
+    public final double memoryLeakWarnRatio;
+    public final int memoryLeakWarnStreak;
+    public final int memoryLeakCheckIntervalSeconds;
+    public final long gcPauseWarnMs;
+    public final int gcPauseCheckIntervalSeconds;
+    public final long watchdogMemoryCapMb;
+    public final int watchdogThreadCap;
+    public final int watchdogCheckIntervalSeconds;
     public final boolean compatibilityEnableScan;
     public final boolean loggingEnableLiveMonitor;
     public final String loggingAiServiceApiKey;
@@ -96,6 +139,14 @@ public class DebugConfig {
         this.reportingGithubRepository = REPORTING_GITHUB_REPO.get();
         this.performanceTickThresholdMs = PERFORMANCE_TICK_THRESHOLD.get();
         this.performanceMemoryWarningRatio = PERFORMANCE_MEMORY_RATIO.get();
+        this.memoryLeakWarnRatio = MEMORY_LEAK_WARN_RATIO.get();
+        this.memoryLeakWarnStreak = MEMORY_LEAK_WARN_STREAK.get();
+        this.memoryLeakCheckIntervalSeconds = MEMORY_LEAK_CHECK_INTERVAL.get();
+        this.gcPauseWarnMs = GC_PAUSE_WARN_MS.get();
+        this.gcPauseCheckIntervalSeconds = GC_PAUSE_CHECK_INTERVAL.get();
+        this.watchdogMemoryCapMb = WATCHDOG_MEMORY_CAP_MB.get();
+        this.watchdogThreadCap = WATCHDOG_THREAD_CAP.get();
+        this.watchdogCheckIntervalSeconds = WATCHDOG_CHECK_INTERVAL.get();
         this.compatibilityEnableScan = COMPAT_ENABLE_SCAN.get();
         this.loggingEnableLiveMonitor = LOGGING_ENABLE_LIVE.get();
         this.loggingAiServiceApiKey = LOGGING_AI_SERVICE_API_KEY.get();

@@ -23,6 +23,8 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -63,7 +65,9 @@ public class DebugGuardian {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         CrashRiskMonitor.start();
-        LiveLogMonitor.start();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            LiveLogMonitor.start();
+        }
         PerformanceMonitor.init();
         PostMortemRecorder.init();
         WorldGenFreezeDetector.start();
@@ -78,12 +82,22 @@ public class DebugGuardian {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
+        MemoryLeakMonitor.start();
+        GcPauseMonitor.start();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            PerformanceMonitor.init();
+        }
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         Watchdog.stop();
         CrashRiskMonitor.stop();
+        MemoryLeakMonitor.stop();
+        GcPauseMonitor.stop();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            PerformanceMonitor.shutdown();
+        }
     }
 }
 
