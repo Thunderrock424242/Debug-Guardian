@@ -57,7 +57,6 @@ public class DebugGuardian {
 
         container.registerConfig(ModConfig.Type.COMMON, DebugConfig.SPEC);
 
-        Watchdog.start();
         StartupFailureReporter.install();
 
 
@@ -82,6 +81,7 @@ public class DebugGuardian {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
+        Watchdog.reloadFromConfig();
         MemoryLeakMonitor.start();
         GcPauseMonitor.start();
         if (FMLEnvironment.dist == Dist.CLIENT) {
