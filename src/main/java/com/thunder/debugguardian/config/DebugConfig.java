@@ -1,5 +1,9 @@
 package com.thunder.debugguardian.config;
 
+import com.thunder.debugguardian.debug.Watchdog;
+import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
+import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
+import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -110,8 +114,32 @@ public class DebugConfig {
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 
+    private static final DebugConfig DEFAULTS = new DebugConfig(
+            500,
+            "YourOrg/YourRepo",
+            50L,
+            0.8D,
+            0.9D,
+            3,
+            30,
+            2_000L,
+            10,
+            8_000L,
+            300,
+            10,
+            true,
+            true,
+            "",
+            100,
+            true,
+            false,
+            true,
+            true,
+            true
+    );
 
-    private static DebugConfig instance;
+    private static volatile DebugConfig instance = DEFAULTS;
+
     public final int postmortemBufferSize;
     public final String reportingGithubRepository;
     public final long performanceTickThresholdMs;
@@ -134,39 +162,88 @@ public class DebugConfig {
     public final boolean crashRiskEnable;
     public final boolean worldAutoScanOnStart;
 
-    private DebugConfig() {
-        this.postmortemBufferSize = POSTMORTEM_BUFFER_SIZE.get();
-        this.reportingGithubRepository = REPORTING_GITHUB_REPO.get();
-        this.performanceTickThresholdMs = PERFORMANCE_TICK_THRESHOLD.get();
-        this.performanceMemoryWarningRatio = PERFORMANCE_MEMORY_RATIO.get();
-        this.memoryLeakWarnRatio = MEMORY_LEAK_WARN_RATIO.get();
-        this.memoryLeakWarnStreak = MEMORY_LEAK_WARN_STREAK.get();
-        this.memoryLeakCheckIntervalSeconds = MEMORY_LEAK_CHECK_INTERVAL.get();
-        this.gcPauseWarnMs = GC_PAUSE_WARN_MS.get();
-        this.gcPauseCheckIntervalSeconds = GC_PAUSE_CHECK_INTERVAL.get();
-        this.watchdogMemoryCapMb = WATCHDOG_MEMORY_CAP_MB.get();
-        this.watchdogThreadCap = WATCHDOG_THREAD_CAP.get();
-        this.watchdogCheckIntervalSeconds = WATCHDOG_CHECK_INTERVAL.get();
-        this.compatibilityEnableScan = COMPAT_ENABLE_SCAN.get();
-        this.loggingEnableLiveMonitor = LOGGING_ENABLE_LIVE.get();
-        this.loggingAiServiceApiKey = LOGGING_AI_SERVICE_API_KEY.get();
-        this.loggingErrorReportInterval = LOGGING_ERROR_REPORT_INTERVAL.get();
-        this.forceCloseEnable = FORCE_CLOSE_ENABLE.get();
-        this.forceCloseLaunchHelper = FORCE_CLOSE_LAUNCH_HELPER.get();
-        this.forceCloseIncludeJavaBase = FORCE_CLOSE_INCLUDE_JAVA_BASE.get();
-        this.crashRiskEnable = CRASH_RISK_ENABLE.get();
-        this.worldAutoScanOnStart = WORLD_AUTO_SCAN_ON_START.get();
+    private DebugConfig(int postmortemBufferSize,
+                        String reportingGithubRepository,
+                        long performanceTickThresholdMs,
+                        double performanceMemoryWarningRatio,
+                        double memoryLeakWarnRatio,
+                        int memoryLeakWarnStreak,
+                        int memoryLeakCheckIntervalSeconds,
+                        long gcPauseWarnMs,
+                        int gcPauseCheckIntervalSeconds,
+                        long watchdogMemoryCapMb,
+                        int watchdogThreadCap,
+                        int watchdogCheckIntervalSeconds,
+                        boolean compatibilityEnableScan,
+                        boolean loggingEnableLiveMonitor,
+                        String loggingAiServiceApiKey,
+                        int loggingErrorReportInterval,
+                        boolean forceCloseEnable,
+                        boolean forceCloseLaunchHelper,
+                        boolean forceCloseIncludeJavaBase,
+                        boolean crashRiskEnable,
+                        boolean worldAutoScanOnStart) {
+        this.postmortemBufferSize = postmortemBufferSize;
+        this.reportingGithubRepository = reportingGithubRepository;
+        this.performanceTickThresholdMs = performanceTickThresholdMs;
+        this.performanceMemoryWarningRatio = performanceMemoryWarningRatio;
+        this.memoryLeakWarnRatio = memoryLeakWarnRatio;
+        this.memoryLeakWarnStreak = memoryLeakWarnStreak;
+        this.memoryLeakCheckIntervalSeconds = memoryLeakCheckIntervalSeconds;
+        this.gcPauseWarnMs = gcPauseWarnMs;
+        this.gcPauseCheckIntervalSeconds = gcPauseCheckIntervalSeconds;
+        this.watchdogMemoryCapMb = watchdogMemoryCapMb;
+        this.watchdogThreadCap = watchdogThreadCap;
+        this.watchdogCheckIntervalSeconds = watchdogCheckIntervalSeconds;
+        this.compatibilityEnableScan = compatibilityEnableScan;
+        this.loggingEnableLiveMonitor = loggingEnableLiveMonitor;
+        this.loggingAiServiceApiKey = loggingAiServiceApiKey;
+        this.loggingErrorReportInterval = loggingErrorReportInterval;
+        this.forceCloseEnable = forceCloseEnable;
+        this.forceCloseLaunchHelper = forceCloseLaunchHelper;
+        this.forceCloseIncludeJavaBase = forceCloseIncludeJavaBase;
+        this.crashRiskEnable = crashRiskEnable;
+        this.worldAutoScanOnStart = worldAutoScanOnStart;
+    }
+
+    private static DebugConfig fromSpec() {
+        return new DebugConfig(
+                POSTMORTEM_BUFFER_SIZE.get(),
+                REPORTING_GITHUB_REPO.get(),
+                PERFORMANCE_TICK_THRESHOLD.get(),
+                PERFORMANCE_MEMORY_RATIO.get(),
+                MEMORY_LEAK_WARN_RATIO.get(),
+                MEMORY_LEAK_WARN_STREAK.get(),
+                MEMORY_LEAK_CHECK_INTERVAL.get(),
+                GC_PAUSE_WARN_MS.get(),
+                GC_PAUSE_CHECK_INTERVAL.get(),
+                WATCHDOG_MEMORY_CAP_MB.get(),
+                WATCHDOG_THREAD_CAP.get(),
+                WATCHDOG_CHECK_INTERVAL.get(),
+                COMPAT_ENABLE_SCAN.get(),
+                LOGGING_ENABLE_LIVE.get(),
+                LOGGING_AI_SERVICE_API_KEY.get(),
+                LOGGING_ERROR_REPORT_INTERVAL.get(),
+                FORCE_CLOSE_ENABLE.get(),
+                FORCE_CLOSE_LAUNCH_HELPER.get(),
+                FORCE_CLOSE_INCLUDE_JAVA_BASE.get(),
+                CRASH_RISK_ENABLE.get(),
+                WORLD_AUTO_SCAN_ON_START.get()
+        );
     }
 
     public static DebugConfig get() {
-        if (instance == null) instance = new DebugConfig();
         return instance;
     }
 
     @SubscribeEvent
     public static void onLoad(ModConfigEvent event) {
         if (event.getConfig().getSpec() == SPEC) {
-            instance = new DebugConfig();
+            instance = fromSpec();
+            Watchdog.reloadFromConfig();
+            MemoryLeakMonitor.reloadFromConfig();
+            GcPauseMonitor.reloadFromConfig();
+            CrashRiskMonitor.reloadFromConfig();
         }
     }
 }

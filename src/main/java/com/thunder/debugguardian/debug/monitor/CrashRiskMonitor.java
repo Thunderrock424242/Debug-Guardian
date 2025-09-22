@@ -69,6 +69,14 @@ public final class CrashRiskMonitor {
         SYMPTOMS.clear();
     }
 
+    public static void reloadFromConfig() {
+        if (!DebugConfig.get().crashRiskEnable) {
+            stop();
+        } else {
+            start();
+        }
+    }
+
     /**
      * Records a suspicious signal. Each key represents a single signal source;
      * new data refreshes the timestamp and increases the occurrence count so

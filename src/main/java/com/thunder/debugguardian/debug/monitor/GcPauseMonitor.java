@@ -8,6 +8,7 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -18,26 +19,53 @@ public class GcPauseMonitor {
     private static final String THREAD_NAME = "debugguardian-gc-monitor";
     private static long lastGcTime = 0;
     private static ScheduledExecutorService scheduler;
+    private static ScheduledFuture<?> scheduledTask;
 
     public static synchronized void start() {
-        if (scheduler != null && !scheduler.isShutdown()) {
+        ensureScheduler();
+        reschedule();
+    }
+
+    public static synchronized void reloadFromConfig() {
+        if (scheduler == null || scheduler.isShutdown()) {
             return;
         }
-        long interval = Math.max(1, DebugConfig.get().gcPauseCheckIntervalSeconds);
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, THREAD_NAME);
-            t.setDaemon(true);
-            return t;
-        });
-        scheduler.scheduleAtFixedRate(GcPauseMonitor::checkGcPauses, interval, interval, TimeUnit.SECONDS);
+        reschedule();
     }
 
     public static synchronized void stop() {
+        if (scheduledTask != null) {
+            scheduledTask.cancel(true);
+            scheduledTask = null;
+        }
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
         lastGcTime = 0;
+    }
+
+    private static void ensureScheduler() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, THREAD_NAME);
+                t.setDaemon(true);
+                return t;
+            });
+        }
+    }
+
+    private static void reschedule() {
+        long interval = Math.max(1, DebugConfig.get().gcPauseCheckIntervalSeconds);
+        if (scheduledTask != null && !scheduledTask.isCancelled()) {
+            scheduledTask.cancel(false);
+        }
+        scheduledTask = scheduler.scheduleAtFixedRate(
+                GcPauseMonitor::checkGcPauses,
+                interval,
+                interval,
+                TimeUnit.SECONDS
+        );
     }
 
     private static void checkGcPauses() {
