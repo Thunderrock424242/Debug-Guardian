@@ -4,6 +4,7 @@ import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
+import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -244,6 +245,7 @@ public class DebugConfig {
             MemoryLeakMonitor.reloadFromConfig();
             GcPauseMonitor.reloadFromConfig();
             CrashRiskMonitor.reloadFromConfig();
+            PostMortemRecorder.reloadFromConfig();
         }
     }
 }
