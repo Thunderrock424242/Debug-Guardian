@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class PostMortemRecorder {
     private static PostMortemRecorder instance;
     private Deque<GameEvent> buffer;
-    private int capacity;
+    private volatile int capacity;
 
     private PostMortemRecorder() {
         // no-op; actual init in init()
@@ -31,7 +31,7 @@ public class PostMortemRecorder {
     public static void init() {
         if (instance == null) {
             instance = new PostMortemRecorder();
-            instance.capacity = DebugConfig.get().postmortemBufferSize;
+            instance.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
             instance.buffer = new ConcurrentLinkedDeque<>();
         }
     }
@@ -47,7 +47,7 @@ public class PostMortemRecorder {
     /** Record a single game event onto the buffer. */
     public void record(GameEvent event) {
         buffer.addLast(event);
-        if (buffer.size() > capacity) buffer.removeFirst();
+        trimToCapacity();
     }
 
     @SubscribeEvent
@@ -61,6 +61,15 @@ public class PostMortemRecorder {
     }
 
     /**
+     * Reload recorder settings from the latest configuration.
+     */
+    public static void reloadFromConfig() {
+        PostMortemRecorder recorder = get();
+        recorder.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
+        recorder.trimToCapacity();
+    }
+
+    /**
      * Dump the current buffer to a JSON file in the crash directory.
      */
     public void dump(Path crashDir) {
@@ -71,6 +80,12 @@ public class PostMortemRecorder {
             Files.writeString(out, json);
         } catch (IOException e) {
             DebugGuardian.LOGGER.error("Failed to dump post-mortem buffer", e);
+        }
+    }
+
+    private void trimToCapacity() {
+        while (buffer.size() > capacity) {
+            buffer.pollFirst();
         }
     }
 }
