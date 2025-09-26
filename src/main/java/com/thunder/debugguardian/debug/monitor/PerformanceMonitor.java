@@ -2,7 +2,6 @@ package com.thunder.debugguardian.debug.monitor;
 
 import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
-import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -30,7 +29,7 @@ public class PerformanceMonitor {
     private Instant last = Instant.now();
     // tracks consecutive slow ticks
     private int slowTickCount = 0;
-    private static final int SLOW_TICK_WARN_INTERVAL = 10;
+    private static final int SLOW_TICK_WARN_INTERVAL = 100;
 
     private PerformanceMonitor() {
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {

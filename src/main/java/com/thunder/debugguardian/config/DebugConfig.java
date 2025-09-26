@@ -29,7 +29,7 @@ public class DebugConfig {
     // Performance Monitoring Settings
     public static final ModConfigSpec.LongValue PERFORMANCE_TICK_THRESHOLD = BUILDER
             .comment("Tick duration (ms) above which a warning is logged")
-            .defineInRange("performance.tickThresholdMs", 75L, 1L, 10000L);
+            .defineInRange("performance.tickThresholdMs", 100L, 1L, 10000L);
 
     public static final ModConfigSpec.DoubleValue PERFORMANCE_MEMORY_RATIO = BUILDER
             .comment("Heap usage ratio (0.0 - 1.0) to trigger memory warning")
