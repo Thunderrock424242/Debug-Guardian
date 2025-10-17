@@ -1,20 +1,29 @@
 package com.thunder.debugguardian.config;
 
 import com.thunder.debugguardian.debug.Watchdog;
+import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
+import net.neoforged.fml.ModList;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
 @EventBusSubscriber(modid = MOD_ID)
 public class DebugConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    private static final Map<String, ModConfigSpec.BooleanValue> LOGGING_MOD_TOGGLES =
+            initModLoggingToggles();
 
     // Post-Mortem Replay Settings
     public static final ModConfigSpec.IntValue POSTMORTEM_BUFFER_SIZE = BUILDER
@@ -136,7 +145,8 @@ public class DebugConfig {
             false,
             true,
             true,
-            true
+            true,
+            snapshotModToggleValues()
     );
 
     private static volatile DebugConfig instance = DEFAULTS;
@@ -162,6 +172,7 @@ public class DebugConfig {
     public final boolean forceCloseIncludeJavaBase;
     public final boolean crashRiskEnable;
     public final boolean worldAutoScanOnStart;
+    public final Map<String, Boolean> loggingModToggles;
 
     private DebugConfig(int postmortemBufferSize,
                         String reportingGithubRepository,
@@ -183,7 +194,8 @@ public class DebugConfig {
                         boolean forceCloseLaunchHelper,
                         boolean forceCloseIncludeJavaBase,
                         boolean crashRiskEnable,
-                        boolean worldAutoScanOnStart) {
+                        boolean worldAutoScanOnStart,
+                        Map<String, Boolean> loggingModToggles) {
         this.postmortemBufferSize = postmortemBufferSize;
         this.reportingGithubRepository = reportingGithubRepository;
         this.performanceTickThresholdMs = performanceTickThresholdMs;
@@ -205,6 +217,7 @@ public class DebugConfig {
         this.forceCloseIncludeJavaBase = forceCloseIncludeJavaBase;
         this.crashRiskEnable = crashRiskEnable;
         this.worldAutoScanOnStart = worldAutoScanOnStart;
+        this.loggingModToggles = Collections.unmodifiableMap(new LinkedHashMap<>(loggingModToggles));
     }
 
     private static DebugConfig fromSpec() {
@@ -229,12 +242,29 @@ public class DebugConfig {
                 FORCE_CLOSE_LAUNCH_HELPER.get(),
                 FORCE_CLOSE_INCLUDE_JAVA_BASE.get(),
                 CRASH_RISK_ENABLE.get(),
-                WORLD_AUTO_SCAN_ON_START.get()
+                WORLD_AUTO_SCAN_ON_START.get(),
+                snapshotModToggleValues()
         );
     }
 
     public static DebugConfig get() {
         return instance;
+    }
+
+    /**
+     * Returns {@code true} if the provided mod id is allowed to emit log output according
+     * to the configuration. Unknown or unlisted mods are treated as allowed.
+     */
+    public static boolean isModLogOutputEnabled(String modId) {
+        if (modId == null || modId.isBlank() || "Unknown".equalsIgnoreCase(modId)) {
+            return true;
+        }
+        ModConfigSpec.BooleanValue value = LOGGING_MOD_TOGGLES.get(modId);
+        return value == null || value.get();
+    }
+
+    public static Set<String> getConfiguredModIds() {
+        return LOGGING_MOD_TOGGLES.keySet();
     }
 
     @SubscribeEvent
@@ -247,5 +277,35 @@ public class DebugConfig {
             CrashRiskMonitor.reloadFromConfig();
             PostMortemRecorder.reloadFromConfig();
         }
+    }
+
+    private static Map<String, ModConfigSpec.BooleanValue> initModLoggingToggles() {
+        Map<String, ModConfigSpec.BooleanValue> toggles = new LinkedHashMap<>();
+        BUILDER.comment("Per-mod switches for allowing a mod's log output. Set to false to silence"
+                        + " all Log4j events emitted by that mod.")
+                .push("logging")
+                .push("modToggles");
+        try {
+            ModList.get().getMods().stream()
+                    .sorted((a, b) -> a.getDisplayName().compareToIgnoreCase(b.getDisplayName()))
+                    .forEach(mod -> {
+                        String modId = mod.getModId();
+                        toggles.put(modId, BUILDER
+                                .comment("Allow log output for "
+                                        + mod.getDisplayName() + " (" + modId + ")")
+                                .define(modId, true));
+                    });
+        } catch (Exception ex) {
+            DebugGuardian.LOGGER.warn("Could not enumerate mods for log toggles; defaulting to enabled.", ex);
+        }
+        BUILDER.pop();
+        BUILDER.pop();
+        return Collections.unmodifiableMap(toggles);
+    }
+
+    private static Map<String, Boolean> snapshotModToggleValues() {
+        Map<String, Boolean> snapshot = new LinkedHashMap<>();
+        LOGGING_MOD_TOGGLES.forEach((modId, value) -> snapshot.put(modId, value.get()));
+        return snapshot;
     }
 }

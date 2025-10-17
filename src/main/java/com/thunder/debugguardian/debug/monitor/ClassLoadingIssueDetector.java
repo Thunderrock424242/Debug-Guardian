@@ -71,6 +71,28 @@ public class ClassLoadingIssueDetector {
     }
 
     /**
+     * Attempts to identify a mod based on the logger name associated with a log event.
+     * Many mods use either their mod id or a package containing the mod id as the logger.
+     */
+    public static String identifyModByLoggerName(String loggerName) {
+        if (loggerName == null || loggerName.isEmpty()) {
+            return "Unknown";
+        }
+        String lower = loggerName.toLowerCase(Locale.ROOT);
+        for (IModInfo mod : ModList.get().getMods()) {
+            String modId = mod.getModId();
+            String modLower = modId.toLowerCase(Locale.ROOT);
+            if (lower.equals(modLower)
+                    || lower.startsWith(modLower + ".")
+                    || lower.contains("." + modLower + ".")
+                    || lower.endsWith("." + modLower)) {
+                return modId;
+            }
+        }
+        return "Unknown";
+    }
+
+    /**
      * Returns the first stack trace element that appears to originate from a mod
      * or, if none match, the first non-JDK/MC frame. Falls back to the top
      * frame when all elements come from the JDK or Minecraft core.
