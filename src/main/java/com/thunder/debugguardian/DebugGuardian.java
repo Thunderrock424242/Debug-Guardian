@@ -9,6 +9,7 @@ import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
+import com.thunder.debugguardian.debug.monitor.ModLogSilencer;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
@@ -58,6 +59,7 @@ public class DebugGuardian {
         container.registerConfig(ModConfig.Type.COMMON, DebugConfig.SPEC);
 
         StartupFailureReporter.install();
+        ModLogSilencer.install();
 
 
     }

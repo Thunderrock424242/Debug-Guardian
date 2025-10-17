@@ -98,6 +98,11 @@ public class LiveLogMonitor {
 
         @Override
         public void append(LogEvent event) {
+            String sourceMod = identifySourceMod(event);
+            if (!DebugConfig.isModLogOutputEnabled(sourceMod)) {
+                return;
+            }
+
             String msg = event.getMessage().getFormattedMessage();
             String classification = null;
             String matchedKey   = null;
@@ -113,11 +118,15 @@ public class LiveLogMonitor {
 
             if (classification != null) {
                 // only detect culprit for class-loading errors
-                String culprit = "";
-                if ("ClassNotFoundException".equals(matchedKey)
-                        || "NoClassDefFoundError".equals(matchedKey)) {
+                String culprit = "Unknown".equals(sourceMod) ? "" : sourceMod;
+                if (culprit.isEmpty()
+                        && ("ClassNotFoundException".equals(matchedKey)
+                        || "NoClassDefFoundError".equals(matchedKey))) {
                     culprit = ClassLoadingIssueDetector
                             .identifyCulpritMod(event.getThrown());
+                    if ("Unknown".equals(culprit)) {
+                        culprit = "";
+                    }
                 }
 
                 // build log entry
@@ -190,6 +199,9 @@ public class LiveLogMonitor {
     public static void captureThrowable(Throwable thrown) {
         String culprit = ClassLoadingIssueDetector
                 .identifyCulpritMod(thrown);
+        if (!DebugConfig.isModLogOutputEnabled(culprit)) {
+            return;
+        }
         StringBuilder sb = new StringBuilder(thrown.toString())
                 .append("\n( requested by: ").append(culprit).append(" )\n");
         for (StackTraceElement el : thrown.getStackTrace()) {
@@ -216,5 +228,21 @@ public class LiveLogMonitor {
         return "https://github.com/"
                 + DebugConfig.get().reportingGithubRepository
                 + "/issues/new";
+    }
+
+    private static String identifySourceMod(LogEvent event) {
+        if (event.getThrown() != null) {
+            String culprit = ClassLoadingIssueDetector
+                    .identifyCulpritMod(event.getThrown());
+            if (!"Unknown".equals(culprit)) {
+                return culprit;
+            }
+        }
+        String loggerName = event.getLoggerName();
+        String fromLogger = ClassLoadingIssueDetector.identifyModByLoggerName(loggerName);
+        if (!"Unknown".equals(fromLogger)) {
+            return fromLogger;
+        }
+        return "Unknown";
     }
 }

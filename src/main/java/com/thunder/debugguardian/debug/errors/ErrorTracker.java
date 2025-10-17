@@ -2,6 +2,7 @@ package com.thunder.debugguardian.debug.errors;
 
 import com.thunder.debugguardian.DebugGuardian;
 import com.thunder.debugguardian.config.DebugConfig;
+import com.thunder.debugguardian.debug.monitor.ClassLoadingIssueDetector;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
@@ -15,6 +16,11 @@ public class ErrorTracker extends AbstractFilter {
     @Override
     public Filter.Result filter(LogEvent event) {
         if (event.getThrown() != null) {
+            String modId = ClassLoadingIssueDetector.identifyCulpritMod(event.getThrown());
+            if (!DebugConfig.isModLogOutputEnabled(modId)) {
+                // Skip aggregation when the mod's log output is muted in the configuration.
+                return Filter.Result.NEUTRAL;
+            }
             String fp = ErrorFingerprinter.fingerprint(event.getThrown());
             AtomicInteger c = counts.computeIfAbsent(fp, k -> new AtomicInteger());
             int count = c.incrementAndGet();
