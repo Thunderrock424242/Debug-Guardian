@@ -7,6 +7,7 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
+import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 /**
  * Installs a Log4j filter that suppresses log events from mods whose
@@ -44,6 +45,9 @@ public final class ModLogSilencer {
         }
 
         private String identifySourceMod(LogEvent event) {
+            if (event == null) {
+                return "Unknown";
+            }
             if (event.getThrown() != null) {
                 String culprit = ClassLoadingIssueDetector
                         .identifyCulpritMod(event.getThrown());
@@ -51,10 +55,28 @@ public final class ModLogSilencer {
                     return culprit;
                 }
             }
+            ReadOnlyStringMap contextData = event.getContextData();
+            if (contextData != null && !contextData.isEmpty()) {
+                String modId = contextData.getValue("modId");
+                if (modId == null) {
+                    modId = contextData.getValue("modid");
+                }
+                if (modId != null && !modId.isBlank() && !"Unknown".equalsIgnoreCase(modId)) {
+                    return modId;
+                }
+            }
             String fromLogger = ClassLoadingIssueDetector
                     .identifyModByLoggerName(event.getLoggerName());
             if (!"Unknown".equals(fromLogger)) {
                 return fromLogger;
+            }
+            StackTraceElement source = event.getSource();
+            if (source != null) {
+                String fromSource = ClassLoadingIssueDetector
+                        .identifyCulpritMod(new StackTraceElement[]{source});
+                if (!"Unknown".equals(fromSource)) {
+                    return fromSource;
+                }
             }
             return "Unknown";
         }
