@@ -13,6 +13,7 @@ import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -231,6 +232,9 @@ public class LiveLogMonitor {
     }
 
     private static String identifySourceMod(LogEvent event) {
+        if (event == null) {
+            return "Unknown";
+        }
         if (event.getThrown() != null) {
             String culprit = ClassLoadingIssueDetector
                     .identifyCulpritMod(event.getThrown());
@@ -238,10 +242,28 @@ public class LiveLogMonitor {
                 return culprit;
             }
         }
+        ReadOnlyStringMap contextData = event.getContextData();
+        if (contextData != null && !contextData.isEmpty()) {
+            String modId = contextData.getValue("modId");
+            if (modId == null) {
+                modId = contextData.getValue("modid");
+            }
+            if (modId != null && !modId.isBlank() && !"Unknown".equalsIgnoreCase(modId)) {
+                return modId;
+            }
+        }
         String loggerName = event.getLoggerName();
         String fromLogger = ClassLoadingIssueDetector.identifyModByLoggerName(loggerName);
         if (!"Unknown".equals(fromLogger)) {
             return fromLogger;
+        }
+        StackTraceElement source = event.getSource();
+        if (source != null) {
+            String fromSource = ClassLoadingIssueDetector
+                    .identifyCulpritMod(new StackTraceElement[]{source});
+            if (!"Unknown".equals(fromSource)) {
+                return fromSource;
+            }
         }
         return "Unknown";
     }
