@@ -305,7 +305,15 @@ public class DebugConfig {
 
     private static Map<String, Boolean> snapshotModToggleValues() {
         Map<String, Boolean> snapshot = new LinkedHashMap<>();
-        LOGGING_MOD_TOGGLES.forEach((modId, value) -> snapshot.put(modId, value.get()));
+        LOGGING_MOD_TOGGLES.forEach((modId, value) -> {
+            boolean enabled;
+            try {
+                enabled = value.get();
+            } catch (IllegalStateException ex) {
+                enabled = value.getDefault();
+            }
+            snapshot.put(modId, enabled);
+        });
         return snapshot;
     }
 }
