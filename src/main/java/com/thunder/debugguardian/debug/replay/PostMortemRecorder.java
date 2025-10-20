@@ -1,10 +1,26 @@
 package com.thunder.debugguardian.debug.replay;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.thunder.debugguardian.config.DebugConfig;
+import com.thunder.debugguardian.DebugGuardian;
+import com.thunder.debugguardian.debug.replay.GameEvent.CommandPayload;
+import com.thunder.debugguardian.debug.replay.GameEvent.EntitySpawnPayload;
+import com.thunder.debugguardian.debug.replay.GameEvent.GameEventPayload;
+import com.thunder.debugguardian.debug.replay.GameEvent.TickEventPayload;
+import net.minecraft.client.Minecraft;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import com.thunder.debugguardian.DebugGuardian;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.CommandEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.io.IOException;
@@ -20,9 +36,10 @@ public class PostMortemRecorder {
     private static PostMortemRecorder instance;
     private Deque<GameEvent> buffer;
     private volatile int capacity;
+    private final Gson gson;
 
     private PostMortemRecorder() {
-        // no-op; actual init in init()
+        this.gson = new GsonBuilder().disableHtmlEscaping().create();
     }
 
     /**
@@ -33,6 +50,7 @@ public class PostMortemRecorder {
             instance = new PostMortemRecorder();
             instance.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
             instance.buffer = new ConcurrentLinkedDeque<>();
+            NeoForge.EVENT_BUS.register(instance);
         }
     }
 
@@ -50,14 +68,72 @@ public class PostMortemRecorder {
         trimToCapacity();
     }
 
-    @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post evt) {
-        get().record(new GameEvent(GameEvent.EventType.TICK, "ClientPost"));
+    /** Convenience helper to create and record an event. */
+    private void record(GameEvent.EventType type, GameEventPayload payload) {
+        record(new GameEvent(type, payload));
     }
 
     @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post evt) {
-        get().record(new GameEvent(GameEvent.EventType.TICK, "ServerPost"));
+    public void onClientTick(ClientTickEvent.Post evt) {
+        Level level = Minecraft.getInstance().level;
+        Long gameTime = level != null ? level.getGameTime() : null;
+        String dimension = level != null ? level.dimension().location().toString() : "client";
+        record(GameEvent.EventType.TICK, new TickEventPayload("client", "POST", gameTime, dimension));
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post evt) {
+        MinecraftServer server = evt.getServer();
+        String dimension = null;
+        Long gameTime = null;
+        if (server != null) {
+            Level overworld = server.overworld();
+            if (overworld != null) {
+                gameTime = overworld.getGameTime();
+                dimension = overworld.dimension().location().toString();
+            }
+        }
+        record(GameEvent.EventType.TICK, new TickEventPayload("server", "POST", gameTime, dimension));
+    }
+
+    @SubscribeEvent
+    public void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        Entity entity = event.getEntity();
+        Level level = event.getLevel();
+        if (!level.isClientSide()) {
+            ResourceLocation dimensionId = level.dimension().location();
+            Component displayName = entity.getName();
+            EntitySpawnPayload payload = new EntitySpawnPayload(
+                    entity.getEncodeId(),
+                    displayName != null ? displayName.getString() : null,
+                    entity.getUUID(),
+                    entity.getX(),
+                    entity.getY(),
+                    entity.getZ(),
+                    dimensionId.toString(),
+                    false
+            );
+            record(GameEvent.EventType.ENTITY_SPAWN, payload);
+        }
+    }
+
+    @SubscribeEvent
+    public void onCommand(CommandEvent event) {
+        CommandSourceStack source = event.getParseResults().getContext().getSource();
+        String commandString = event.getParseResults().getReader().getString();
+        Vec3 pos = source.getPosition();
+        Level level = source.getLevel();
+        double[] position = pos != null ? new double[]{pos.x, pos.y, pos.z} : null;
+        String dimension = level != null ? level.dimension().location().toString() : null;
+        boolean executesOnServer = level == null || !level.isClientSide();
+        CommandPayload payload = new CommandPayload(
+                source.getTextName(),
+                commandString,
+                position,
+                dimension,
+                executesOnServer
+        );
+        record(GameEvent.EventType.COMMAND, payload);
     }
 
     /**
@@ -76,7 +152,7 @@ public class PostMortemRecorder {
         try {
             Files.createDirectories(crashDir);
             Path out = crashDir.resolve("postmortem.json");
-            String json = new Gson().toJson(buffer);
+            String json = gson.toJson(buffer);
             Files.writeString(out, json);
         } catch (IOException e) {
             DebugGuardian.LOGGER.error("Failed to dump post-mortem buffer", e);
