@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version "2.0.107"
+    id 'net.neoforged.moddev' version "2.0.115"
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.4.2"
+version = "1.4.3"
 group = "com.thunder.debugguardian"
 
 repositories {
@@ -30,7 +30,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 neoForge {
     // Specify the version of NeoForge to use.
-    version = "21.1.209"
+    version = "21.1.211"
 
     parchment {
         mappingsVersion = project.parchment_mappings_version
@@ -151,13 +151,13 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     var replaceProperties = [
             minecraft_version      : "1.21.1",
             minecraft_version_range: minecraft_version_range,
-            neo_version            : "21.1.209",
+            neo_version            : "21.1.211",
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : "1.4.2",
+            mod_version            : "1.4.3",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]
