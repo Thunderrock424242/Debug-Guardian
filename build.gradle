@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.4.0"
+version = "1.4.2"
 group = "com.thunder.debugguardian"
 
 repositories {
@@ -112,6 +112,12 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+repositories {
+    maven {
+        url "https://cursemaven.com"
+    }
+}
+
 dependencies {
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -145,13 +151,13 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     var replaceProperties = [
             minecraft_version      : "1.21.1",
             minecraft_version_range: minecraft_version_range,
-            neo_version            : "21.1.208",
+            neo_version            : "21.1.209",
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : "1.4.0",
+            mod_version            : "1.4.2",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]

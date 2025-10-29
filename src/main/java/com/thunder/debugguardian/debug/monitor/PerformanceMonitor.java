@@ -99,7 +99,7 @@ public class PerformanceMonitor {
         if (ms > threshold) {
             slowTickCount++;
             if (slowTickCount == 1) {
-                DebugGuardian.LOGGER.warn(
+                DebugGuardian.LOGGER.debug(
                         "Concerning slow tick detected: {} ms (threshold {} ms)", ms, threshold
                 );
                 CrashRiskMonitor.recordSymptom(
@@ -108,7 +108,7 @@ public class PerformanceMonitor {
                         "Tick duration spiked to " + ms + " ms (threshold " + threshold + " ms)"
                 );
             } else if (slowTickCount % SLOW_TICK_WARN_INTERVAL == 0) {
-                DebugGuardian.LOGGER.warn(
+                DebugGuardian.LOGGER.debug(
                         "Still slow for {} consecutive ticks; last tick {} ms (threshold {} ms)",
                         slowTickCount, ms, threshold
                 );
@@ -119,7 +119,7 @@ public class PerformanceMonitor {
                 );
             }
         } else if (slowTickCount > 0) {
-            DebugGuardian.LOGGER.info(
+            DebugGuardian.LOGGER.debug(
                     "Recovered after {} slow ticks; last tick {} ms", slowTickCount, ms
             );
             slowTickCount = 0;
