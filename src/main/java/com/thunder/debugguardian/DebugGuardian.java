@@ -8,6 +8,7 @@ import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
+import com.thunder.debugguardian.debug.monitor.PerformanceSnapshotLogger;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.monitor.ModLogSilencer;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
@@ -70,6 +71,7 @@ public class DebugGuardian {
             LiveLogMonitor.start();
         }
         PerformanceMonitor.init();
+        PerformanceSnapshotLogger.start();
         PostMortemRecorder.init();
         WorldGenFreezeDetector.start();
         ThreadUsageMonitor.start();
@@ -97,12 +99,12 @@ public class DebugGuardian {
         CrashRiskMonitor.stop();
         MemoryLeakMonitor.stop();
         GcPauseMonitor.stop();
+        PerformanceSnapshotLogger.stop();
         if (FMLEnvironment.dist == Dist.CLIENT) {
             PerformanceMonitor.shutdown();
         }
     }
 }
-
 
 
 
