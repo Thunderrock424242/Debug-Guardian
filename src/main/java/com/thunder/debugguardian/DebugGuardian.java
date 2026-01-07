@@ -86,8 +86,8 @@ public class DebugGuardian {
     public void onServerStarting(ServerStartingEvent event) {
         UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
         Watchdog.reloadFromConfig();
-        MemoryLeakMonitor.start();
-        GcPauseMonitor.start();
+        MemoryLeakMonitor.reloadFromConfig();
+        GcPauseMonitor.reloadFromConfig();
         if (FMLEnvironment.dist == Dist.CLIENT) {
             PerformanceMonitor.init();
         }
@@ -105,6 +105,5 @@ public class DebugGuardian {
         }
     }
 }
-
 
 

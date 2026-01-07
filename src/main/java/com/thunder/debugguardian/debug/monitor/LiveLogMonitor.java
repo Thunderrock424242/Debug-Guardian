@@ -20,6 +20,7 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LiveLogMonitor {
     private static final Path RUNTIME_LOG =
@@ -27,6 +28,7 @@ public class LiveLogMonitor {
     private static final Set<String> seenErrors = ConcurrentHashMap.newKeySet();
     private static final Map<String, String> errorClassifications = new LinkedHashMap<>();
     private static final ClientNotifier CLIENT_NOTIFIER;
+    private static final AtomicBoolean started = new AtomicBoolean(false);
 
     static {
         errorClassifications.put("Mixin apply failed",
@@ -71,6 +73,9 @@ public class LiveLogMonitor {
     public static void start() {
         if (FMLEnvironment.dist != Dist.CLIENT) return;
         if (!DebugConfig.get().loggingEnableLiveMonitor) return;
+        if (!started.compareAndSet(false, true)) {
+            return;
+        }
         resetLog();
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         LoggerConfig root = ctx.getConfiguration().getRootLogger();
