@@ -68,6 +68,9 @@ public class PerformanceMonitor {
         MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
         double used = mem.getHeapMemoryUsage().getUsed();
         double max = mem.getHeapMemoryUsage().getMax();
+        if (max <= 0) {
+            return;
+        }
         if (used / max > DebugConfig.get().performanceMemoryWarningRatio) {
             DebugGuardian.LOGGER.warn("Memory usage high: {}%", used / max * 100);
         }
@@ -126,4 +129,3 @@ public class PerformanceMonitor {
         }
     }
 }
-

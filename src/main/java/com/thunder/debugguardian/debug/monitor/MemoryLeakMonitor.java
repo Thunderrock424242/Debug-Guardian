@@ -71,6 +71,9 @@ public class MemoryLeakMonitor {
         MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
         long used = mem.getHeapMemoryUsage().getUsed();
         long max = mem.getHeapMemoryUsage().getMax();
+        if (max <= 0) {
+            return;
+        }
         double ratio = (double) used / max;
         DebugConfig config = DebugConfig.get();
         double warnRatio = config.memoryLeakWarnRatio;
@@ -103,4 +106,3 @@ public class MemoryLeakMonitor {
         }
     }
 }
-
