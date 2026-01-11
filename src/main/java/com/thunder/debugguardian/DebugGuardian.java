@@ -5,6 +5,7 @@ import com.thunder.debugguardian.debug.Watchdog;
 import com.thunder.debugguardian.debug.monitor.CrashRiskMonitor;
 import com.thunder.debugguardian.debug.monitor.ForceCloseDetector;
 import com.thunder.debugguardian.debug.monitor.GcPauseMonitor;
+import com.thunder.debugguardian.debug.monitor.LoadingHangDetector;
 import com.thunder.debugguardian.debug.monitor.LiveLogMonitor;
 import com.thunder.debugguardian.debug.monitor.MemoryLeakMonitor;
 import com.thunder.debugguardian.debug.monitor.PerformanceMonitor;
@@ -12,6 +13,7 @@ import com.thunder.debugguardian.debug.monitor.PerformanceSnapshotLogger;
 import com.thunder.debugguardian.debug.monitor.StartupFailureReporter;
 import com.thunder.debugguardian.debug.monitor.ModLogSilencer;
 import com.thunder.debugguardian.debug.monitor.ThreadUsageMonitor;
+import com.thunder.debugguardian.debug.monitor.DeadlockDetector;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
@@ -61,6 +63,9 @@ public class DebugGuardian {
 
         StartupFailureReporter.install();
         ModLogSilencer.install();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            LoadingHangDetector.start();
+        }
 
 
     }
@@ -79,6 +84,7 @@ public class DebugGuardian {
         WorldHangDetector.start();
         ForceCloseDetector.start();
         MemoryLeakMonitor.start();
+        DeadlockDetector.start();
 
     }
 
@@ -100,10 +106,10 @@ public class DebugGuardian {
         MemoryLeakMonitor.stop();
         GcPauseMonitor.stop();
         PerformanceSnapshotLogger.stop();
+        DeadlockDetector.stop();
         if (FMLEnvironment.dist == Dist.CLIENT) {
             PerformanceMonitor.shutdown();
         }
     }
 }
-
 
