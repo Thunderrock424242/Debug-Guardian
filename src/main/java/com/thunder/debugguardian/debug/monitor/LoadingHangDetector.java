@@ -33,7 +33,7 @@ import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
  * Watches the client loading phase and reports when the main thread appears
  * stuck on the same stack trace for an extended period.
  */
-@EventBusSubscriber(modid = MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT)
 public final class LoadingHangDetector {
     private static final long CHECK_INTERVAL_SECONDS = 10L;
     private static final long HANG_THRESHOLD_MS = 60_000L;
