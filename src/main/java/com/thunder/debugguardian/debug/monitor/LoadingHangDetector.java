@@ -69,6 +69,19 @@ public final class LoadingHangDetector {
     private LoadingHangDetector() {
     }
 
+    public record LoadingHangSnapshot(boolean loadComplete,
+                                      boolean worldJoined,
+                                      StackTraceElement[] lastStack,
+                                      long lastProgressTime,
+                                      int matchCount,
+                                      long lastCpuTime) {
+    }
+
+    public static LoadingHangSnapshot snapshot() {
+        StackTraceElement[] snapshotStack = lastStack == null ? null : Arrays.copyOf(lastStack, lastStack.length);
+        return new LoadingHangSnapshot(loadComplete, worldJoined, snapshotStack, lastProgressTime, matchCount, lastCpuTime);
+    }
+
     public static void start() {
         EXECUTOR.scheduleAtFixedRate(LoadingHangDetector::checkHang,
                 CHECK_INTERVAL_SECONDS, CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS);
