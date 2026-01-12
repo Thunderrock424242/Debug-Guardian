@@ -21,7 +21,7 @@ import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,7 +51,7 @@ public class PostMortemRecorder {
             instance.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
             instance.buffer = new ConcurrentLinkedDeque<>();
             NeoForge.EVENT_BUS.register(instance);
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> com.thunder.debugguardian.debug.replay.client.PostMortemRecorderClient::register);
+            registerClientHooks();
         }
     }
 
@@ -161,6 +161,20 @@ public class PostMortemRecorder {
     private void trimToCapacity() {
         while (buffer.size() > capacity) {
             buffer.pollFirst();
+        }
+    }
+
+    private static void registerClientHooks() {
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            return;
+        }
+        try {
+            Class<?> clientRegistrar = Class.forName(
+                    "com.thunder.debugguardian.debug.replay.client.PostMortemRecorderClient"
+            );
+            clientRegistrar.getMethod("register").invoke(null);
+        } catch (ReflectiveOperationException e) {
+            DebugGuardian.LOGGER.error("Failed to register client post-mortem hooks", e);
         }
     }
 }
