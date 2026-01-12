@@ -65,6 +65,7 @@ public class DebugGuardian {
 
         StartupFailureReporter.install();
         ModLogSilencer.install();
+        ForceCloseDetector.start();
         if (FMLEnvironment.dist == Dist.CLIENT) {
             LoadingHangDetector.start();
         }
@@ -88,7 +89,6 @@ public class DebugGuardian {
         ThreadUsageMonitor.start();
         GcPauseMonitor.start();
         WorldHangDetector.start();
-        ForceCloseDetector.start();
         MemoryLeakMonitor.start();
         DeadlockDetector.start();
 
