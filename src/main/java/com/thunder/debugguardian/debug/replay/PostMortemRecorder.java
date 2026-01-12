@@ -8,7 +8,6 @@ import com.thunder.debugguardian.debug.replay.GameEvent.CommandPayload;
 import com.thunder.debugguardian.debug.replay.GameEvent.EntitySpawnPayload;
 import com.thunder.debugguardian.debug.replay.GameEvent.GameEventPayload;
 import com.thunder.debugguardian.debug.replay.GameEvent.TickEventPayload;
-import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -17,11 +16,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,6 +51,7 @@ public class PostMortemRecorder {
             instance.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
             instance.buffer = new ConcurrentLinkedDeque<>();
             NeoForge.EVENT_BUS.register(instance);
+            registerClientHooks();
         }
     }
 
@@ -73,9 +74,7 @@ public class PostMortemRecorder {
         record(new GameEvent(type, payload));
     }
 
-    @SubscribeEvent
-    public void onClientTick(ClientTickEvent.Post evt) {
-        Level level = Minecraft.getInstance().level;
+    public void recordClientTick(Level level) {
         Long gameTime = level != null ? level.getGameTime() : null;
         String dimension = level != null ? level.dimension().location().toString() : "client";
         record(GameEvent.EventType.TICK, new TickEventPayload("client", "POST", gameTime, dimension));
@@ -162,6 +161,20 @@ public class PostMortemRecorder {
     private void trimToCapacity() {
         while (buffer.size() > capacity) {
             buffer.pollFirst();
+        }
+    }
+
+    private static void registerClientHooks() {
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            return;
+        }
+        try {
+            Class<?> clientRegistrar = Class.forName(
+                    "com.thunder.debugguardian.debug.replay.client.PostMortemRecorderClient"
+            );
+            clientRegistrar.getMethod("register").invoke(null);
+        } catch (ReflectiveOperationException e) {
+            DebugGuardian.LOGGER.error("Failed to register client post-mortem hooks", e);
         }
     }
 }
