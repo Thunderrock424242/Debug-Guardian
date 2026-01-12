@@ -5,6 +5,7 @@ import net.neoforged.neoforgespi.language.IModInfo;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.CodeSource;
 import java.util.Enumeration;
@@ -125,15 +126,32 @@ public class ClassLoadingIssueDetector {
             Class<?> cls = Class.forName(clsName);
             CodeSource src = cls.getProtectionDomain().getCodeSource();
             if (src == null) return null;
-            Path path = Path.of(src.getLocation().toURI());
+            Path path = normalizePath(Path.of(src.getLocation().toURI()));
             for (IModInfo mod : ModList.get().getMods()) {
-                if (path.equals(mod.getOwningFile().getFile().getFilePath())) {
+                Path modPath = normalizePath(mod.getOwningFile().getFile().getFilePath());
+                if (path.equals(modPath)) {
+                    return mod.getModId();
+                }
+                if (Files.isDirectory(modPath) && path.startsWith(modPath)) {
+                    return mod.getModId();
+                }
+                if (!Files.isDirectory(modPath)
+                        && path.getFileName() != null
+                        && path.getFileName().equals(modPath.getFileName())) {
                     return mod.getModId();
                 }
             }
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    private static Path normalizePath(Path path) {
+        try {
+            return path.toRealPath();
+        } catch (Exception ignored) {
+            return path.normalize().toAbsolutePath();
+        }
     }
 
     /**

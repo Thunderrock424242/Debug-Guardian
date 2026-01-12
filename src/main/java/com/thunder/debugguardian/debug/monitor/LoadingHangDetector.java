@@ -7,6 +7,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -50,6 +51,7 @@ public final class LoadingHangDetector {
             });
 
     private static volatile boolean loadComplete;
+    private static volatile boolean worldJoined;
     private static volatile StackTraceElement[] lastStack;
     private static volatile long lastProgressTime = System.currentTimeMillis();
     private static volatile int matchCount;
@@ -82,8 +84,16 @@ public final class LoadingHangDetector {
         stop();
     }
 
+    @SubscribeEvent
+    public static void onWorldLoad(LevelEvent.Load event) {
+        if (event.getLevel() instanceof net.minecraft.world.level.Level level && level.isClientSide()) {
+            worldJoined = true;
+            stop();
+        }
+    }
+
     private static void checkHang() {
-        if (loadComplete) {
+        if (loadComplete || worldJoined) {
             return;
         }
         Thread mainThread = findMainThread();
