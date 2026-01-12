@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = "1.4.3"
+version = "1.5.0"
 group = "com.thunder.debugguardian"
 
 repositories {
@@ -30,7 +30,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 neoForge {
     // Specify the version of NeoForge to use.
-    version = "21.1.211"
+    version = "21.1.218"
 
     parchment {
         mappingsVersion = project.parchment_mappings_version
@@ -157,7 +157,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_id                 : "debugguardian",
             mod_name               : "Debug Guardian",
             mod_license            : mod_license,
-            mod_version            : "1.4.3",
+            mod_version            : "1.5.0",
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]

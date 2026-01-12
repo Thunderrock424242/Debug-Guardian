@@ -268,7 +268,7 @@ public final class LoadingHangDetector {
         try {
             Files.write(suspects, lines);
             if (!sorted.isEmpty()) {
-                Map.Entry<String, Long> top = sorted.get(0);
+                Map.Entry<String, Long> top = sorted.getFirst();
                 DebugGuardian.LOGGER.warn("Loading hang suspects written to {} (top: {} — {} thread(s))",
                         suspects, top.getKey(), top.getValue());
             } else {
