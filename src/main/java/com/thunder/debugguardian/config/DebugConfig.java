@@ -260,7 +260,14 @@ public class DebugConfig {
             return true;
         }
         ModConfigSpec.BooleanValue value = LOGGING_MOD_TOGGLES.get(modId);
-        return value == null || value.get();
+        if (value == null) {
+            return true;
+        }
+        try {
+            return value.get();
+        } catch (IllegalStateException ex) {
+            return value.getDefault();
+        }
     }
 
     public static Set<String> getConfiguredModIds() {
