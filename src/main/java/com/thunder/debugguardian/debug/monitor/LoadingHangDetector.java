@@ -40,7 +40,7 @@ public final class LoadingHangDetector {
     private static final long HANG_THRESHOLD_MS = 60_000L;
     private static final int REQUIRED_MATCHES = 4;
     private static final long MIN_CPU_DELTA_MS = 50L;
-    private static final Path DUMP_DIR = FMLPaths.GAMEDIR.get().resolve("debugguardian");
+    private static final Path DUMP_DIR = FMLPaths.GAMEDIR.get().resolve("logs").resolve("debugguardian");
     private static final ThreadMXBean BEAN = ManagementFactory.getThreadMXBean();
 
     private static final ScheduledExecutorService EXECUTOR =
@@ -131,12 +131,8 @@ public final class LoadingHangDetector {
                 CrashRiskMonitor.Severity.CRITICAL,
                 "Client loading hang detected (" + culprit + ")"
         );
-        writeMainThreadDump(timestamp, info, stack, culprit, elapsed, cpuDeltaMs);
-        List<ThreadReport> reports = dumpThreads(timestamp);
-        if (!reports.isEmpty()) {
-            writeSummary(timestamp, reports);
-            writeSuspects(timestamp, reports);
-        }
+        List<ThreadReport> reports = collectThreadReports();
+        writeUnifiedReport(timestamp, info, stack, culprit, elapsed, cpuDeltaMs, reports);
 
         matchCount = 0;
         lastProgressTime = System.currentTimeMillis();
@@ -165,18 +161,23 @@ public final class LoadingHangDetector {
         return deltaMs;
     }
 
-    private static void writeMainThreadDump(String timestamp,
-                                            ThreadInfo info,
-                                            StackTraceElement[] stack,
-                                            String culprit,
-                                            long elapsed,
-                                            long cpuDeltaMs) {
-        Path file = DUMP_DIR.resolve("loading-hang-" + timestamp + "-main.log");
+    private static void writeUnifiedReport(String timestamp,
+                                           ThreadInfo info,
+                                           StackTraceElement[] stack,
+                                           String culprit,
+                                           long elapsed,
+                                           long cpuDeltaMs,
+                                           List<ThreadReport> reports) {
+        Path file = DUMP_DIR.resolve("loading-hang-" + timestamp + ".log");
         try {
             Files.createDirectories(DUMP_DIR);
             try (BufferedWriter writer = Files.newBufferedWriter(file, StandardOpenOption.CREATE_NEW)) {
                 writer.write("Loading hang detected at " + timestamp + " (" + elapsed + " ms, cpu delta "
                         + cpuDeltaMs + " ms, mod: " + culprit + ")");
+                writer.newLine();
+                writer.newLine();
+
+                writer.write("==== MAIN THREAD ====");
                 writer.newLine();
                 if (info != null) {
                     writer.write("Thread state: " + info.getThreadState());
@@ -190,15 +191,64 @@ public final class LoadingHangDetector {
                         writer.newLine();
                     }
                 }
-                writer.newLine();
                 for (StackTraceElement element : stack) {
                     writer.write("    at " + element);
                     writer.newLine();
                 }
+                writer.newLine();
+
+                writer.write("==== THREAD DUMPS ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No non-framework threads captured.");
+                    writer.newLine();
+                } else {
+                    for (ThreadReport report : reports) {
+                        writer.write("Thread: " + report.thread() + " mod: " + report.mod()
+                                + " state: " + report.state());
+                        writer.newLine();
+                        for (String frame : report.stack()) {
+                            writer.write("\t" + frame);
+                            writer.newLine();
+                        }
+                        writer.newLine();
+                    }
+                }
+
+                writer.write("==== THREAD SUMMARY ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No summary available.");
+                    writer.newLine();
+                } else {
+                    for (ThreadReport report : reports) {
+                        writer.write(report.thread() + " - " + report.mod() + " [" + report.state() + "] ("
+                                + report.stack().size() + " frames)");
+                        writer.newLine();
+                    }
+                }
+                writer.newLine();
+
+                writer.write("==== SUSPECTS ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No suspects available.");
+                    writer.newLine();
+                } else {
+                    Map<String, Long> counts = reports.stream()
+                            .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
+                    List<Map.Entry<String, Long>> sorted = counts.entrySet().stream()
+                            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                            .toList();
+                    for (Map.Entry<String, Long> entry : sorted) {
+                        writer.write(entry.getKey() + " - " + entry.getValue() + " thread(s)");
+                        writer.newLine();
+                    }
+                }
             }
-            DebugGuardian.LOGGER.warn("Loading hang stack dump written to {}", file);
+            DebugGuardian.LOGGER.warn("Loading hang report written to {}", file);
         } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write loading hang dump", e);
+            DebugGuardian.LOGGER.error("Failed to write loading hang report", e);
         }
     }
 
@@ -209,83 +259,32 @@ public final class LoadingHangDetector {
                 cn.startsWith("jdk.");
     }
 
-    private static List<ThreadReport> dumpThreads(String timestamp) {
+    private static List<ThreadReport> collectThreadReports() {
         List<ThreadReport> reports = new ArrayList<>();
-        Path file = DUMP_DIR.resolve("loading-hang-" + timestamp + "-threads.log");
         try {
-            Files.createDirectories(DUMP_DIR);
-            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardOpenOption.CREATE_NEW)) {
-                for (ThreadInfo info : BEAN.dumpAllThreads(true, true)) {
-                    StackTraceElement[] stack = info.getStackTrace();
-                    if (stack == null || stack.length == 0) {
-                        continue;
-                    }
-                    List<String> frames = new ArrayList<>();
-                    boolean hasAppFrame = false;
-                    for (StackTraceElement frame : stack) {
-                        if (!isFrameworkClass(frame)) {
-                            hasAppFrame = true;
-                            frames.add("at " + frame);
-                        }
-                    }
-                    if (!hasAppFrame) {
-                        continue;
-                    }
-
-                    String mod = ClassLoadingIssueDetector.identifyCulpritMod(stack);
-                    writer.write("Thread: " + info.getThreadName() + " mod: " + mod + " state: " + info.getThreadState());
-                    writer.newLine();
-                    for (String frame : frames) {
-                        writer.write("\t" + frame);
-                        writer.newLine();
-                    }
-                    writer.newLine();
-
-                    reports.add(new ThreadReport(info.getThreadName(), mod, info.getThreadState().name(), List.copyOf(frames)));
+            for (ThreadInfo info : BEAN.dumpAllThreads(true, true)) {
+                StackTraceElement[] stack = info.getStackTrace();
+                if (stack == null || stack.length == 0) {
+                    continue;
                 }
+                List<String> frames = new ArrayList<>();
+                boolean hasAppFrame = false;
+                for (StackTraceElement frame : stack) {
+                    if (!isFrameworkClass(frame)) {
+                        hasAppFrame = true;
+                        frames.add("at " + frame);
+                    }
+                }
+                if (!hasAppFrame) {
+                    continue;
+                }
+
+                String mod = ClassLoadingIssueDetector.identifyCulpritMod(stack);
+                reports.add(new ThreadReport(info.getThreadName(), mod, info.getThreadState().name(), List.copyOf(frames)));
             }
-            DebugGuardian.LOGGER.warn("Loading hang thread dump written to {}", file);
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write loading hang thread dump", e);
+        } catch (Exception e) {
+            DebugGuardian.LOGGER.error("Failed to collect loading hang thread dump", e);
         }
         return reports;
-    }
-
-    private static void writeSummary(String timestamp, List<ThreadReport> reports) {
-        List<String> lines = new ArrayList<>();
-        for (ThreadReport report : reports) {
-            lines.add(report.thread() + " - " + report.mod() + " [" + report.state() + "] (" + report.stack().size() + " frames)");
-        }
-        Path summary = DUMP_DIR.resolve("loading-hang-" + timestamp + "-summary.txt");
-        try {
-            Files.write(summary, lines);
-            DebugGuardian.LOGGER.warn("Loading hang thread summary written to {} ({} thread(s))", summary, reports.size());
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write loading hang summary", e);
-        }
-    }
-
-    private static void writeSuspects(String timestamp, List<ThreadReport> reports) {
-        Map<String, Long> counts = reports.stream()
-                .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
-        List<Map.Entry<String, Long>> sorted = counts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .toList();
-        List<String> lines = sorted.stream()
-                .map(entry -> entry.getKey() + " - " + entry.getValue() + " thread(s)")
-                .collect(Collectors.toList());
-        Path suspects = DUMP_DIR.resolve("loading-hang-" + timestamp + "-suspects.txt");
-        try {
-            Files.write(suspects, lines);
-            if (!sorted.isEmpty()) {
-                Map.Entry<String, Long> top = sorted.getFirst();
-                DebugGuardian.LOGGER.warn("Loading hang suspects written to {} (top: {} — {} thread(s))",
-                        suspects, top.getKey(), top.getValue());
-            } else {
-                DebugGuardian.LOGGER.warn("Loading hang suspects written to {}", suspects);
-            }
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write loading hang suspects", e);
-        }
     }
 }

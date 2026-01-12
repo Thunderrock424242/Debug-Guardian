@@ -1,8 +1,6 @@
 package com.thunder.debugguardian.debug.monitor;
 
 import com.thunder.debugguardian.DebugGuardian;
-import com.thunder.debugguardian.debug.external.AiLogAnalyzer;
-import com.thunder.debugguardian.debug.external.LogAnalyzer;
 import com.thunder.debugguardian.debug.external.ThreadReport;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -52,7 +50,7 @@ public class WorldHangDetector {
             });
 
     private static final Path DUMP_DIR =
-            FMLPaths.GAMEDIR.get().resolve("debugguardian");
+            FMLPaths.GAMEDIR.get().resolve("logs").resolve("debugguardian");
 
     private static volatile long lastTick = System.currentTimeMillis();
     private static volatile StackTraceElement[] lastStackTrace;
@@ -141,10 +139,25 @@ public class WorldHangDetector {
                         DebugGuardian.LOGGER.debug("    at {}", element);
                     }
                 }
-                ThreadDumpResult dump = dumpThreads(BEAN);
-                if (dump != null) {
-                    analyzeDump(dump, elapsed);
-                }
+                List<ThreadReport> reports = collectThreadReports();
+                String analysis = reports.isEmpty()
+                        ? ""
+                        : new com.thunder.debugguardian.debug.external.AiLogAnalyzer().analyze(reports);
+                writeUnifiedReport(
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")),
+                        elapsed,
+                        cpuDeltaMs,
+                        info,
+                        lock,
+                        owner,
+                        ownerId,
+                        culprit,
+                        top,
+                        culpritFrame,
+                        stack,
+                        reports,
+                        analysis
+                );
 
                 matchCount = 0;
                 lastStackTrace = null;
@@ -172,118 +185,180 @@ public class WorldHangDetector {
                 cn.startsWith("jdk.");
     }
 
-    private static ThreadDumpResult dumpThreads(ThreadMXBean bean) {
+    private static List<ThreadReport> collectThreadReports() {
         List<ThreadReport> reports = new ArrayList<>();
-        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        Path file = DUMP_DIR.resolve("world-hang-" + ts + ".log");
+        try {
+            for (ThreadInfo info : BEAN.dumpAllThreads(true, true)) {
+                StackTraceElement[] stack = info.getStackTrace();
+                if (stack == null || stack.length == 0) {
+                    continue;
+                }
 
+                List<String> frames = new ArrayList<>();
+                boolean hasAppFrame = false;
+                for (StackTraceElement frame : stack) {
+                    if (!isFrameworkClass(frame)) {
+                        hasAppFrame = true;
+                        frames.add("at " + frame);
+                    }
+                }
+
+                if (!hasAppFrame) {
+                    continue;
+                }
+
+                String mod = ClassLoadingIssueDetector.identifyCulpritMod(stack);
+                reports.add(new ThreadReport(info.getThreadName(), mod, info.getThreadState().name(), List.copyOf(frames)));
+            }
+        } catch (Exception e) {
+            DebugGuardian.LOGGER.error("Failed to collect world hang thread dump", e);
+        }
+        return reports;
+    }
+
+    private static void writeUnifiedReport(String timestamp,
+                                           long elapsed,
+                                           long cpuDeltaMs,
+                                           ThreadInfo info,
+                                           String lock,
+                                           String owner,
+                                           long ownerId,
+                                           String culprit,
+                                           StackTraceElement top,
+                                           StackTraceElement culpritFrame,
+                                           StackTraceElement[] stack,
+                                           List<ThreadReport> reports,
+                                           String analysis) {
+        Path file = DUMP_DIR.resolve("world-hang-" + timestamp + ".log");
         try {
             Files.createDirectories(DUMP_DIR);
-            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardOpenOption.CREATE_NEW)) {
-                for (ThreadInfo info : bean.dumpAllThreads(true, true)) {
-                    StackTraceElement[] stack = info.getStackTrace();
-                    if (stack == null || stack.length == 0) {
-                        continue;
-                    }
+            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardOpenOption.CREATE_NEW, StandardCharsets.UTF_8)) {
+                writer.write("World hang detected at " + timestamp + " (" + elapsed + " ms, cpu delta "
+                        + cpuDeltaMs + " ms, mod: " + culprit + ")");
+                writer.newLine();
+                writer.newLine();
 
-                    List<String> frames = new ArrayList<>();
-                    boolean hasAppFrame = false;
-                    for (StackTraceElement frame : stack) {
-                        if (!isFrameworkClass(frame)) {
-                            hasAppFrame = true;
-                            frames.add("at " + frame);
-                        }
-                    }
-
-                    if (!hasAppFrame) {
-                        continue;
-                    }
-
-                    String mod = ClassLoadingIssueDetector.identifyCulpritMod(stack);
-                    writer.write("Thread: " + info.getThreadName() + " mod: " + mod + " state: " + info.getThreadState());
+                writer.write("==== SERVER THREAD ====");
+                writer.newLine();
+                writer.write("State: " + (info != null ? info.getThreadState() : "unknown"));
+                writer.newLine();
+                writer.write("Waiting on: " + lock + " owned by " + owner + " (id " + ownerId + ")");
+                writer.newLine();
+                writer.write("Top frame: " + top);
+                writer.newLine();
+                writer.write("Culprit frame: " + culpritFrame);
+                writer.newLine();
+                if (info != null && info.getLockInfo() != null) {
+                    writer.write("Lock info: " + info.getLockInfo());
                     writer.newLine();
-                    for (String frame : frames) {
-                        writer.write("\t" + frame);
+                }
+                if (info != null && info.getLockOwnerName() != null) {
+                    writer.write("Lock owner: " + info.getLockOwnerName() + " (id " + info.getLockOwnerId() + ")");
+                    writer.newLine();
+                }
+                for (StackTraceElement element : stack) {
+                    writer.write("    at " + element);
+                    writer.newLine();
+                }
+                writer.newLine();
+
+                if (ownerId != -1) {
+                    ThreadInfo ownerInfo = BEAN.getThreadInfo(ownerId, Integer.MAX_VALUE);
+                    StackTraceElement[] ownerStack = ownerInfo != null ? ownerInfo.getStackTrace() : null;
+                    writer.write("==== LOCK OWNER ====");
+                    writer.newLine();
+                    writer.write("Owner: " + owner);
+                    writer.newLine();
+                    if (ownerStack != null) {
+                        for (StackTraceElement element : ownerStack) {
+                            writer.write("    at " + element);
+                            writer.newLine();
+                        }
+                    } else {
+                        writer.write("No lock owner stack captured.");
                         writer.newLine();
                     }
                     writer.newLine();
+                }
 
-                    reports.add(new ThreadReport(info.getThreadName(), mod, info.getThreadState().name(), List.copyOf(frames)));
+                writer.write("==== THREAD DUMPS ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No non-framework threads captured.");
+                    writer.newLine();
+                } else {
+                    for (ThreadReport report : reports) {
+                        writer.write("Thread: " + report.thread() + " mod: " + report.mod()
+                                + " state: " + report.state());
+                        writer.newLine();
+                        for (String frame : report.stack()) {
+                            writer.write("\t" + frame);
+                            writer.newLine();
+                        }
+                        writer.newLine();
+                    }
+                }
+
+                writer.write("==== THREAD SUMMARY ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No summary available.");
+                    writer.newLine();
+                } else {
+                    for (ThreadReport report : reports) {
+                        writer.write(report.thread() + " - " + report.mod() + " [" + report.state() + "] ("
+                                + report.stack().size() + " frames)");
+                        writer.newLine();
+                    }
+                }
+                writer.newLine();
+
+                writer.write("==== SUSPECTS ====");
+                writer.newLine();
+                if (reports.isEmpty()) {
+                    writer.write("No suspects available.");
+                    writer.newLine();
+                } else {
+                    Map<String, Long> counts = reports.stream()
+                            .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
+                    List<Map.Entry<String, Long>> sorted = counts.entrySet().stream()
+                            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                            .toList();
+                    for (Map.Entry<String, Long> entry : sorted) {
+                        writer.write(entry.getKey() + " - " + entry.getValue() + " thread(s)");
+                        writer.newLine();
+                    }
+                }
+                writer.newLine();
+
+                writer.write("==== ANALYSIS ====");
+                writer.newLine();
+                if (analysis == null || analysis.isBlank()) {
+                    writer.write("No analysis available.");
+                    writer.newLine();
+                } else {
+                    writer.write(analysis.trim());
+                    writer.newLine();
                 }
             }
-            DebugGuardian.LOGGER.warn("Filtered thread dump written to {}", file);
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write thread dump", e);
-            return new ThreadDumpResult(null, ts, reports);
-        }
 
-        return new ThreadDumpResult(file, ts, reports);
-    }
-
-    private static void analyzeDump(ThreadDumpResult dump, long elapsed) {
-        List<ThreadReport> threads = dump.threads();
-        if (threads.isEmpty()) {
-            DebugGuardian.LOGGER.warn("World hang detected ({} ms) but no mod-owned frames were captured in the dump.", elapsed);
-            return;
-        }
-
-        writeSummary(dump.timestamp(), threads);
-        writeSuspects(dump.timestamp(), threads);
-        writeExplanation(dump.timestamp(), threads, elapsed);
-    }
-
-    private static void writeSummary(String timestamp, List<ThreadReport> threads) {
-        List<String> lines = new ArrayList<>();
-        for (ThreadReport tr : threads) {
-            lines.add(tr.thread() + " - " + tr.mod() + " [" + tr.state() + "] (" + tr.stack().size() + " frames)");
-        }
-        Path summary = DUMP_DIR.resolve("world-hang-" + timestamp + "-summary.txt");
-        try {
-            Files.write(summary, lines, StandardCharsets.UTF_8);
-            DebugGuardian.LOGGER.warn("World hang thread summary written to {} ({} thread(s))", summary, threads.size());
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write world hang summary", e);
-        }
-    }
-
-    private static void writeSuspects(String timestamp, List<ThreadReport> threads) {
-        Map<String, Long> counts = threads.stream()
-                .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
-        List<Map.Entry<String, Long>> sorted = counts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .toList();
-        List<String> lines = sorted.stream()
-                .map(e -> e.getKey() + " - " + e.getValue() + " thread(s)")
-                .collect(Collectors.toList());
-        Path suspects = DUMP_DIR.resolve("world-hang-" + timestamp + "-suspects.txt");
-        try {
-            Files.write(suspects, lines, StandardCharsets.UTF_8);
-            if (!sorted.isEmpty()) {
-                Map.Entry<String, Long> top = sorted.get(0);
-                DebugGuardian.LOGGER.warn("World hang suspect summary written to {} (top: {} — {} thread(s))",
-                        suspects, top.getKey(), top.getValue());
+            if (reports.isEmpty()) {
+                DebugGuardian.LOGGER.warn("World hang report written to {} (no mod-owned frames captured)", file);
             } else {
-                DebugGuardian.LOGGER.warn("World hang suspect summary written to {}", suspects);
+                Map<String, Long> counts = reports.stream()
+                        .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
+                Map.Entry<String, Long> top = counts.entrySet().stream()
+                        .max(Map.Entry.comparingByValue())
+                        .orElse(null);
+                if (top != null) {
+                    DebugGuardian.LOGGER.warn("World hang report written to {} (top suspect: {} — {} thread(s))",
+                            file, top.getKey(), top.getValue());
+                } else {
+                    DebugGuardian.LOGGER.warn("World hang report written to {}", file);
+                }
             }
         } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write world hang suspects", e);
+            DebugGuardian.LOGGER.error("Failed to write world hang report", e);
         }
-    }
-
-    private static void writeExplanation(String timestamp, List<ThreadReport> threads, long elapsed) {
-        LogAnalyzer analyzer = new AiLogAnalyzer();
-        String explanation = analyzer.analyze(threads);
-        Path explanationFile = DUMP_DIR.resolve("world-hang-" + timestamp + "-analysis.txt");
-        try {
-            Files.writeString(explanationFile, explanation, StandardCharsets.UTF_8);
-            String headline = explanation.lines().findFirst().orElse(explanation).trim();
-            DebugGuardian.LOGGER.warn("World hang analysis ({} ms) written to {} — {}", elapsed, explanationFile, headline);
-        } catch (IOException e) {
-            DebugGuardian.LOGGER.error("Failed to write world hang analysis", e);
-        }
-    }
-
-    private record ThreadDumpResult(Path file, String timestamp, List<ThreadReport> threads) {
     }
 }
-
