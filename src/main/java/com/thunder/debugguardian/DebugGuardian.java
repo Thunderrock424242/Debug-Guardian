@@ -18,6 +18,7 @@ import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -54,6 +55,7 @@ public class DebugGuardian {
     public DebugGuardian(IEventBus modEventBus, ModContainer container) {
         LOGGER.info("DebugGuardian initialized; starting monitors");
         // Register mod setup
+        modEventBus.addListener(EventPriority.HIGHEST, this::earlyCommonSetup);
         modEventBus.addListener(this::commonSetup);
 
         // Register global events
@@ -68,6 +70,10 @@ public class DebugGuardian {
         }
 
 
+    }
+
+    private void earlyCommonSetup(final FMLCommonSetupEvent event) {
+        DebugConfig.applyNeoForgeVersionCheckSetting();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -112,4 +118,3 @@ public class DebugGuardian {
         }
     }
 }
-

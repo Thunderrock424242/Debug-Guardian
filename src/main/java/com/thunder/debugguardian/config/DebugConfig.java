@@ -84,6 +84,11 @@ public class DebugConfig {
             .comment("Enable scanning for known mod incompatibilities at startup")
             .define("compatibility.enableScan", true);
 
+    // NeoForge Version Checker Settings
+    public static final ModConfigSpec.BooleanValue DISABLE_NEOFORGE_VERSION_CHECK = BUILDER
+            .comment("Disable the NeoForge version checker globally for all mods in this instance")
+            .define("neoforge.disableVersionCheck", false);
+
     // Live Log Monitor Settings
     public static final ModConfigSpec.BooleanValue LOGGING_ENABLE_LIVE = BUILDER
             .comment("Enable real-time in-game log monitoring and notifications")
@@ -138,6 +143,7 @@ public class DebugConfig {
             300,
             10,
             true,
+            false,
             true,
             "",
             100,
@@ -164,6 +170,7 @@ public class DebugConfig {
     public final int watchdogThreadCap;
     public final int watchdogCheckIntervalSeconds;
     public final boolean compatibilityEnableScan;
+    public final boolean disableNeoForgeVersionCheck;
     public final boolean loggingEnableLiveMonitor;
     public final String loggingAiServiceApiKey;
     public final int loggingErrorReportInterval;
@@ -187,6 +194,7 @@ public class DebugConfig {
                         int watchdogThreadCap,
                         int watchdogCheckIntervalSeconds,
                         boolean compatibilityEnableScan,
+                        boolean disableNeoForgeVersionCheck,
                         boolean loggingEnableLiveMonitor,
                         String loggingAiServiceApiKey,
                         int loggingErrorReportInterval,
@@ -209,6 +217,7 @@ public class DebugConfig {
         this.watchdogThreadCap = watchdogThreadCap;
         this.watchdogCheckIntervalSeconds = watchdogCheckIntervalSeconds;
         this.compatibilityEnableScan = compatibilityEnableScan;
+        this.disableNeoForgeVersionCheck = disableNeoForgeVersionCheck;
         this.loggingEnableLiveMonitor = loggingEnableLiveMonitor;
         this.loggingAiServiceApiKey = loggingAiServiceApiKey;
         this.loggingErrorReportInterval = loggingErrorReportInterval;
@@ -235,6 +244,7 @@ public class DebugConfig {
                 WATCHDOG_THREAD_CAP.get(),
                 WATCHDOG_CHECK_INTERVAL.get(),
                 COMPAT_ENABLE_SCAN.get(),
+                DISABLE_NEOFORGE_VERSION_CHECK.get(),
                 LOGGING_ENABLE_LIVE.get(),
                 LOGGING_AI_SERVICE_API_KEY.get(),
                 LOGGING_ERROR_REPORT_INTERVAL.get(),
@@ -271,11 +281,21 @@ public class DebugConfig {
     public static void onLoad(ModConfigEvent event) {
         if (event.getConfig().getSpec() == SPEC) {
             instance = fromSpec();
+            applyNeoForgeVersionCheckSetting();
             Watchdog.reloadFromConfig();
             MemoryLeakMonitor.reloadFromConfig();
             GcPauseMonitor.reloadFromConfig();
             CrashRiskMonitor.reloadFromConfig();
             PostMortemRecorder.reloadFromConfig();
+        }
+    }
+
+    public static void applyNeoForgeVersionCheckSetting() {
+        if (DISABLE_NEOFORGE_VERSION_CHECK.get()) {
+            net.neoforged.fml.loading.FMLConfig.updateConfig(
+                    net.neoforged.fml.loading.FMLConfig.ConfigValue.VERSION_CHECK,
+                    false
+            );
         }
     }
 
