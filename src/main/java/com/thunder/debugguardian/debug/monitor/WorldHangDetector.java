@@ -232,7 +232,7 @@ public class WorldHangDetector {
         Path file = DUMP_DIR.resolve("world-hang-" + timestamp + ".log");
         try {
             Files.createDirectories(DUMP_DIR);
-            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardOpenOption.CREATE_NEW, StandardCharsets.UTF_8)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)) {
                 writer.write("World hang detected at " + timestamp + " (" + elapsed + " ms, cpu delta "
                         + cpuDeltaMs + " ms, mod: " + culprit + ")");
                 writer.newLine();
@@ -347,12 +347,12 @@ public class WorldHangDetector {
             } else {
                 Map<String, Long> counts = reports.stream()
                         .collect(Collectors.groupingBy(ThreadReport::mod, Collectors.counting()));
-                Map.Entry<String, Long> top = counts.entrySet().stream()
+                Map.Entry<String, Long> topEntry = counts.entrySet().stream()
                         .max(Map.Entry.comparingByValue())
                         .orElse(null);
-                if (top != null) {
+                if (topEntry != null) {
                     DebugGuardian.LOGGER.warn("World hang report written to {} (top suspect: {} — {} thread(s))",
-                            file, top.getKey(), top.getValue());
+                            file, topEntry.getKey(), topEntry.getValue());
                 } else {
                     DebugGuardian.LOGGER.warn("World hang report written to {}", file);
                 }
