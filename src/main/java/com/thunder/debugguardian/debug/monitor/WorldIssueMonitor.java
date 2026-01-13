@@ -20,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
 
@@ -30,11 +31,8 @@ import static com.thunder.debugguardian.DebugGuardian.MOD_ID;
  */
 @EventBusSubscriber(modid = MOD_ID)
 public final class WorldIssueMonitor {
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "debugguardian-world-autoscan");
-        t.setDaemon(true);
-        return t;
-    });
+    private static final Object EXECUTOR_LOCK = new Object();
+    private static ExecutorService executor;
     private static final DateTimeFormatter REPORT_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
@@ -48,12 +46,34 @@ public final class WorldIssueMonitor {
         }
         Path worldDir = event.getServer().getWorldPath(LevelResource.ROOT);
         Path reportDir = FMLPaths.GAMEDIR.get().resolve("debugguardian").resolve("worldchecks");
-        EXECUTOR.submit(() -> runScan(worldDir, reportDir));
+        try {
+            getExecutor().submit(() -> runScan(worldDir, reportDir));
+        } catch (RejectedExecutionException e) {
+            DebugGuardian.LOGGER.warn("Automated world scan skipped because the executor is shutting down.", e);
+        }
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
-        EXECUTOR.shutdownNow();
+        synchronized (EXECUTOR_LOCK) {
+            if (executor != null) {
+                executor.shutdownNow();
+                executor = null;
+            }
+        }
+    }
+
+    private static ExecutorService getExecutor() {
+        synchronized (EXECUTOR_LOCK) {
+            if (executor == null || executor.isShutdown() || executor.isTerminated()) {
+                executor = Executors.newSingleThreadExecutor(r -> {
+                    Thread t = new Thread(r, "debugguardian-world-autoscan");
+                    t.setDaemon(true);
+                    return t;
+                });
+            }
+            return executor;
+        }
     }
 
     private static void runScan(Path worldDir, Path reportDir) {
