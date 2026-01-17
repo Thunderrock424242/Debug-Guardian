@@ -17,6 +17,7 @@ import com.thunder.debugguardian.debug.monitor.DeadlockDetector;
 import com.thunder.debugguardian.debug.monitor.WorldGenFreezeDetector;
 import com.thunder.debugguardian.debug.monitor.WorldHangDetector;
 import com.thunder.debugguardian.debug.replay.PostMortemRecorder;
+import com.thunder.debugguardian.util.ModInstallTracker;
 import com.thunder.debugguardian.util.UnusedConfigScanner;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -75,6 +76,7 @@ public class DebugGuardian {
 
     private void earlyCommonSetup(final FMLCommonSetupEvent event) {
         DebugConfig.applyNeoForgeVersionCheckSetting();
+        ModInstallTracker.recordNewMods();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
