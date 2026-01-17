@@ -40,7 +40,8 @@ public final class ModInstallTracker {
         JsonObject root = loadExisting();
         List<String> newlySeen = new ArrayList<>();
         List<String> removed = new ArrayList<>();
-        String now = formatInstant(Instant.now());
+        Instant nowInstant = Instant.now();
+        String now = formatInstant(nowInstant);
         boolean changed = false;
         Set<String> currentMods = new HashSet<>();
 
@@ -49,7 +50,7 @@ public final class ModInstallTracker {
             currentMods.add(modId);
             JsonObject entry = getEntry(root, modId);
             if (!entry.has("addedAt")) {
-                entry.addProperty("addedAt", now);
+                entry.addProperty("addedAt", resolveInitialAddedAt(mod, nowInstant));
                 newlySeen.add(modId);
             }
             entry.addProperty("version", mod.getVersion().toString());
@@ -116,5 +117,18 @@ public final class ModInstallTracker {
         JsonObject entry = new JsonObject();
         root.add(modId, entry);
         return entry;
+    }
+
+    private static String resolveInitialAddedAt(IModInfo mod, Instant fallback) {
+        try {
+            Path modPath = mod.getOwningFile().getFile().getFilePath();
+            if (Files.exists(modPath)) {
+                Instant modInstant = Files.getLastModifiedTime(modPath).toInstant();
+                return formatInstant(modInstant);
+            }
+        } catch (Exception e) {
+            LOGGER.debug("[DebugGuardian] Failed to read mod file timestamp for {}: {}", mod.getModId(), e.toString());
+        }
+        return formatInstant(fallback);
     }
 }
