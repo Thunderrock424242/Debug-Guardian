@@ -76,6 +76,7 @@ public class DebugGuardian {
 
     private void earlyCommonSetup(final FMLCommonSetupEvent event) {
         DebugConfig.applyNeoForgeVersionCheckSetting();
+        ModInstallTracker.recordNewMods();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -98,7 +99,6 @@ public class DebugGuardian {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
-        ModInstallTracker.recordNewMods();
         Watchdog.reloadFromConfig();
         MemoryLeakMonitor.reloadFromConfig();
         GcPauseMonitor.reloadFromConfig();
