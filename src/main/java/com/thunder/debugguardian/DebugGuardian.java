@@ -64,10 +64,17 @@ public class DebugGuardian {
 
         container.registerConfig(ModConfig.Type.COMMON, DebugConfig.SPEC);
 
-        StartupFailureReporter.install();
-        ModLogSilencer.install();
-        ForceCloseDetector.start();
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        DebugConfig config = DebugConfig.get();
+        if (config.startupFailureReporterEnable) {
+            StartupFailureReporter.install();
+        }
+        if (config.modLogSilencerEnable) {
+            ModLogSilencer.install();
+        }
+        if (config.forceCloseEnable) {
+            ForceCloseDetector.start();
+        }
+        if (FMLEnvironment.dist == Dist.CLIENT && config.loadingHangDetectorEnable) {
             LoadingHangDetector.start();
         }
 
@@ -80,29 +87,65 @@ public class DebugGuardian {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        CrashRiskMonitor.start();
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        DebugConfig config = DebugConfig.get();
+        if (config.crashRiskEnable) {
+            CrashRiskMonitor.start();
+        }
+        if (FMLEnvironment.dist == Dist.CLIENT && config.loggingEnableLiveMonitor) {
             LiveLogMonitor.start();
         }
-        PerformanceMonitor.init();
-        PerformanceSnapshotLogger.start();
-        PostMortemRecorder.init();
-        WorldGenFreezeDetector.start();
-        ThreadUsageMonitor.start();
-        GcPauseMonitor.start();
-        WorldHangDetector.start();
-        MemoryLeakMonitor.start();
-        DeadlockDetector.start();
+        if (config.performanceMonitorEnable) {
+            PerformanceMonitor.init();
+        }
+        if (config.performanceSnapshotEnable) {
+            PerformanceSnapshotLogger.start();
+        }
+        if (config.postMortemEnable) {
+            PostMortemRecorder.init();
+        }
+        if (config.worldGenFreezeDetectorEnable) {
+            WorldGenFreezeDetector.start();
+        }
+        if (config.threadUsageMonitorEnable) {
+            ThreadUsageMonitor.start();
+        }
+        if (config.gcPauseMonitorEnable) {
+            GcPauseMonitor.start();
+        }
+        if (config.worldHangDetectorEnable) {
+            WorldHangDetector.start();
+        }
+        if (config.memoryLeakMonitorEnable) {
+            MemoryLeakMonitor.start();
+        }
+        if (config.deadlockDetectorEnable) {
+            DeadlockDetector.start();
+        }
 
     }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
-        Watchdog.reloadFromConfig();
-        MemoryLeakMonitor.reloadFromConfig();
-        GcPauseMonitor.reloadFromConfig();
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        DebugConfig config = DebugConfig.get();
+        if (config.unusedConfigScannerEnable) {
+            UnusedConfigScanner.scanForUnusedConfigs(event.getServer());
+        }
+        if (config.watchdogEnable) {
+            Watchdog.reloadFromConfig();
+        } else {
+            Watchdog.stop();
+        }
+        if (config.memoryLeakMonitorEnable) {
+            MemoryLeakMonitor.reloadFromConfig();
+        } else {
+            MemoryLeakMonitor.stop();
+        }
+        if (config.gcPauseMonitorEnable) {
+            GcPauseMonitor.reloadFromConfig();
+        } else {
+            GcPauseMonitor.stop();
+        }
+        if (FMLEnvironment.dist == Dist.CLIENT && config.performanceMonitorEnable) {
             PerformanceMonitor.init();
         }
     }

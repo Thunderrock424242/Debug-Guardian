@@ -139,6 +139,9 @@ public class PostMortemRecorder {
      * Reload recorder settings from the latest configuration.
      */
     public static void reloadFromConfig() {
+        if (!DebugConfig.get().postMortemEnable) {
+            return;
+        }
         PostMortemRecorder recorder = get();
         recorder.capacity = Math.max(1, DebugConfig.get().postmortemBufferSize);
         recorder.trimToCapacity();

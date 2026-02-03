@@ -22,11 +22,19 @@ public class GcPauseMonitor {
     private static ScheduledFuture<?> scheduledTask;
 
     public static synchronized void start() {
+        if (!DebugConfig.get().gcPauseMonitorEnable) {
+            stop();
+            return;
+        }
         ensureScheduler();
         reschedule();
     }
 
     public static synchronized void reloadFromConfig() {
+        if (!DebugConfig.get().gcPauseMonitorEnable) {
+            stop();
+            return;
+        }
         if (scheduler == null || scheduler.isShutdown()) {
             return;
         }
