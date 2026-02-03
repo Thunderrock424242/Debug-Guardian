@@ -21,11 +21,19 @@ public class MemoryLeakMonitor {
     private static ScheduledFuture<?> scheduledTask;
 
     public static synchronized void start() {
+        if (!DebugConfig.get().memoryLeakMonitorEnable) {
+            stop();
+            return;
+        }
         ensureScheduler();
         reschedule();
     }
 
     public static synchronized void reloadFromConfig() {
+        if (!DebugConfig.get().memoryLeakMonitorEnable) {
+            stop();
+            return;
+        }
         if (scheduler == null || scheduler.isShutdown()) {
             return;
         }

@@ -67,6 +67,10 @@ public class DebugConfig {
             .defineInRange("monitoring.gc.checkIntervalSeconds", 10, 1, 600);
 
     // Watchdog Settings
+    public static final ModConfigSpec.BooleanValue WATCHDOG_ENABLE = BUILDER
+            .comment("Enable the watchdog resource monitor")
+            .define("monitoring.watchdog.enable", false);
+
     public static final ModConfigSpec.LongValue WATCHDOG_MEMORY_CAP_MB = BUILDER
             .comment("Heap usage (in MB) that triggers a watchdog warning")
             .defineInRange("monitoring.watchdog.maxMemoryMb", 8_000L, 512L, 65_536L);
@@ -82,7 +86,7 @@ public class DebugConfig {
     // Compatibility Scanner Settings
     public static final ModConfigSpec.BooleanValue COMPAT_ENABLE_SCAN = BUILDER
             .comment("Enable scanning for known mod incompatibilities at startup")
-            .define("compatibility.enableScan", true);
+            .define("compatibility.enableScan", false);
 
     // NeoForge Version Checker Settings
     public static final ModConfigSpec.BooleanValue DISABLE_NEOFORGE_VERSION_CHECK = BUILDER
@@ -92,7 +96,7 @@ public class DebugConfig {
     // Live Log Monitor Settings
     public static final ModConfigSpec.BooleanValue LOGGING_ENABLE_LIVE = BUILDER
             .comment("Enable real-time in-game log monitoring and notifications")
-            .define("logging.enableLiveMonitor", true);
+            .define("logging.enableLiveMonitor", false);
 
     // AI Log Analyzer Settings
     public static final ModConfigSpec.ConfigValue<String> LOGGING_AI_SERVICE_API_KEY = BUILDER
@@ -104,10 +108,19 @@ public class DebugConfig {
             .comment("Number of identical errors to skip before logging again")
             .defineInRange("logging.errorReportInterval", 100, 1, 10000);
 
+    // Core Debug Feature Toggles
+    public static final ModConfigSpec.BooleanValue STARTUP_FAILURE_REPORTER_ENABLE = BUILDER
+            .comment("Enable startup failure reporting")
+            .define("debug.startupFailureReporter.enable", false);
+
+    public static final ModConfigSpec.BooleanValue MOD_LOG_SILENCER_ENABLE = BUILDER
+            .comment("Enable per-mod log silencing controls")
+            .define("debug.modLogSilencer.enable", false);
+
     // Force Close Debugging Settings
     public static final ModConfigSpec.BooleanValue FORCE_CLOSE_ENABLE = BUILDER
             .comment("Enable capturing mod stacks when the game is forcibly closed")
-            .define("debug.forceClose.enable", true);
+            .define("debug.forceClose.enable", false);
 
     public static final ModConfigSpec.BooleanValue FORCE_CLOSE_LAUNCH_HELPER = BUILDER
             .comment("Launch a helper JVM alongside the game for deeper debugging")
@@ -120,12 +133,56 @@ public class DebugConfig {
     // Crash Risk Monitor Settings
     public static final ModConfigSpec.BooleanValue CRASH_RISK_ENABLE = BUILDER
             .comment("Enable aggregated crash risk detection")
-            .define("debug.crashRisk.enable", true);
+            .define("debug.crashRisk.enable", false);
+
+    public static final ModConfigSpec.BooleanValue LOADING_HANG_DETECTOR_ENABLE = BUILDER
+            .comment("Enable client-side loading hang detection")
+            .define("debug.loadingHangDetector.enable", false);
+
+    public static final ModConfigSpec.BooleanValue PERFORMANCE_MONITOR_ENABLE = BUILDER
+            .comment("Enable tick and memory performance monitoring")
+            .define("monitoring.performance.enable", false);
+
+    public static final ModConfigSpec.BooleanValue PERFORMANCE_SNAPSHOT_ENABLE = BUILDER
+            .comment("Enable periodic performance snapshot logging")
+            .define("monitoring.performanceSnapshot.enable", false);
+
+    public static final ModConfigSpec.BooleanValue POST_MORTEM_ENABLE = BUILDER
+            .comment("Enable post-mortem event recording")
+            .define("debug.postMortem.enable", false);
+
+    public static final ModConfigSpec.BooleanValue WORLD_GEN_FREEZE_ENABLE = BUILDER
+            .comment("Enable world generation freeze detection")
+            .define("debug.worldGenFreezeDetector.enable", false);
+
+    public static final ModConfigSpec.BooleanValue THREAD_USAGE_MONITOR_ENABLE = BUILDER
+            .comment("Enable thread usage monitoring")
+            .define("monitoring.threadUsage.enable", false);
+
+    public static final ModConfigSpec.BooleanValue GC_PAUSE_MONITOR_ENABLE = BUILDER
+            .comment("Enable GC pause monitoring")
+            .define("monitoring.gcPause.enable", false);
+
+    public static final ModConfigSpec.BooleanValue WORLD_HANG_DETECTOR_ENABLE = BUILDER
+            .comment("Enable world hang detection")
+            .define("debug.worldHangDetector.enable", false);
+
+    public static final ModConfigSpec.BooleanValue MEMORY_LEAK_MONITOR_ENABLE = BUILDER
+            .comment("Enable memory leak monitoring")
+            .define("monitoring.memoryLeak.enable", false);
+
+    public static final ModConfigSpec.BooleanValue DEADLOCK_DETECTOR_ENABLE = BUILDER
+            .comment("Enable JVM deadlock detection")
+            .define("debug.deadlockDetector.enable", false);
+
+    public static final ModConfigSpec.BooleanValue UNUSED_CONFIG_SCANNER_ENABLE = BUILDER
+            .comment("Enable unused config scanner on server start")
+            .define("debug.unusedConfigScanner.enable", false);
 
     // World Integrity Monitoring Settings
     public static final ModConfigSpec.BooleanValue WORLD_AUTO_SCAN_ON_START = BUILDER
             .comment("Automatically scan the active world for issues when the server starts")
-            .define("world.autoScanOnStart", true);
+            .define("world.autoScanOnStart", false);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 
@@ -142,16 +199,31 @@ public class DebugConfig {
             8_000L,
             300,
             10,
-            true,
             false,
-            true,
+            false,
+            false,
+            false,
             "",
             100,
-            true,
+            false,
+            false,
+            false,
             false,
             true,
-            true,
-            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
             snapshotModToggleValues()
     );
 
@@ -169,15 +241,29 @@ public class DebugConfig {
     public final long watchdogMemoryCapMb;
     public final int watchdogThreadCap;
     public final int watchdogCheckIntervalSeconds;
+    public final boolean watchdogEnable;
     public final boolean compatibilityEnableScan;
     public final boolean disableNeoForgeVersionCheck;
     public final boolean loggingEnableLiveMonitor;
     public final String loggingAiServiceApiKey;
     public final int loggingErrorReportInterval;
+    public final boolean startupFailureReporterEnable;
+    public final boolean modLogSilencerEnable;
     public final boolean forceCloseEnable;
     public final boolean forceCloseLaunchHelper;
     public final boolean forceCloseIncludeJavaBase;
     public final boolean crashRiskEnable;
+    public final boolean loadingHangDetectorEnable;
+    public final boolean performanceMonitorEnable;
+    public final boolean performanceSnapshotEnable;
+    public final boolean postMortemEnable;
+    public final boolean worldGenFreezeDetectorEnable;
+    public final boolean threadUsageMonitorEnable;
+    public final boolean gcPauseMonitorEnable;
+    public final boolean worldHangDetectorEnable;
+    public final boolean memoryLeakMonitorEnable;
+    public final boolean deadlockDetectorEnable;
+    public final boolean unusedConfigScannerEnable;
     public final boolean worldAutoScanOnStart;
     public final Map<String, Boolean> loggingModToggles;
 
@@ -193,15 +279,29 @@ public class DebugConfig {
                         long watchdogMemoryCapMb,
                         int watchdogThreadCap,
                         int watchdogCheckIntervalSeconds,
+                        boolean watchdogEnable,
                         boolean compatibilityEnableScan,
                         boolean disableNeoForgeVersionCheck,
                         boolean loggingEnableLiveMonitor,
                         String loggingAiServiceApiKey,
                         int loggingErrorReportInterval,
+                        boolean startupFailureReporterEnable,
+                        boolean modLogSilencerEnable,
                         boolean forceCloseEnable,
                         boolean forceCloseLaunchHelper,
                         boolean forceCloseIncludeJavaBase,
                         boolean crashRiskEnable,
+                        boolean loadingHangDetectorEnable,
+                        boolean performanceMonitorEnable,
+                        boolean performanceSnapshotEnable,
+                        boolean postMortemEnable,
+                        boolean worldGenFreezeDetectorEnable,
+                        boolean threadUsageMonitorEnable,
+                        boolean gcPauseMonitorEnable,
+                        boolean worldHangDetectorEnable,
+                        boolean memoryLeakMonitorEnable,
+                        boolean deadlockDetectorEnable,
+                        boolean unusedConfigScannerEnable,
                         boolean worldAutoScanOnStart,
                         Map<String, Boolean> loggingModToggles) {
         this.postmortemBufferSize = postmortemBufferSize;
@@ -216,15 +316,29 @@ public class DebugConfig {
         this.watchdogMemoryCapMb = watchdogMemoryCapMb;
         this.watchdogThreadCap = watchdogThreadCap;
         this.watchdogCheckIntervalSeconds = watchdogCheckIntervalSeconds;
+        this.watchdogEnable = watchdogEnable;
         this.compatibilityEnableScan = compatibilityEnableScan;
         this.disableNeoForgeVersionCheck = disableNeoForgeVersionCheck;
         this.loggingEnableLiveMonitor = loggingEnableLiveMonitor;
         this.loggingAiServiceApiKey = loggingAiServiceApiKey;
         this.loggingErrorReportInterval = loggingErrorReportInterval;
+        this.startupFailureReporterEnable = startupFailureReporterEnable;
+        this.modLogSilencerEnable = modLogSilencerEnable;
         this.forceCloseEnable = forceCloseEnable;
         this.forceCloseLaunchHelper = forceCloseLaunchHelper;
         this.forceCloseIncludeJavaBase = forceCloseIncludeJavaBase;
         this.crashRiskEnable = crashRiskEnable;
+        this.loadingHangDetectorEnable = loadingHangDetectorEnable;
+        this.performanceMonitorEnable = performanceMonitorEnable;
+        this.performanceSnapshotEnable = performanceSnapshotEnable;
+        this.postMortemEnable = postMortemEnable;
+        this.worldGenFreezeDetectorEnable = worldGenFreezeDetectorEnable;
+        this.threadUsageMonitorEnable = threadUsageMonitorEnable;
+        this.gcPauseMonitorEnable = gcPauseMonitorEnable;
+        this.worldHangDetectorEnable = worldHangDetectorEnable;
+        this.memoryLeakMonitorEnable = memoryLeakMonitorEnable;
+        this.deadlockDetectorEnable = deadlockDetectorEnable;
+        this.unusedConfigScannerEnable = unusedConfigScannerEnable;
         this.worldAutoScanOnStart = worldAutoScanOnStart;
         this.loggingModToggles = Collections.unmodifiableMap(new LinkedHashMap<>(loggingModToggles));
     }
@@ -243,15 +357,29 @@ public class DebugConfig {
                 WATCHDOG_MEMORY_CAP_MB.get(),
                 WATCHDOG_THREAD_CAP.get(),
                 WATCHDOG_CHECK_INTERVAL.get(),
+                WATCHDOG_ENABLE.get(),
                 COMPAT_ENABLE_SCAN.get(),
                 DISABLE_NEOFORGE_VERSION_CHECK.get(),
                 LOGGING_ENABLE_LIVE.get(),
                 LOGGING_AI_SERVICE_API_KEY.get(),
                 LOGGING_ERROR_REPORT_INTERVAL.get(),
+                STARTUP_FAILURE_REPORTER_ENABLE.get(),
+                MOD_LOG_SILENCER_ENABLE.get(),
                 FORCE_CLOSE_ENABLE.get(),
                 FORCE_CLOSE_LAUNCH_HELPER.get(),
                 FORCE_CLOSE_INCLUDE_JAVA_BASE.get(),
                 CRASH_RISK_ENABLE.get(),
+                LOADING_HANG_DETECTOR_ENABLE.get(),
+                PERFORMANCE_MONITOR_ENABLE.get(),
+                PERFORMANCE_SNAPSHOT_ENABLE.get(),
+                POST_MORTEM_ENABLE.get(),
+                WORLD_GEN_FREEZE_ENABLE.get(),
+                THREAD_USAGE_MONITOR_ENABLE.get(),
+                GC_PAUSE_MONITOR_ENABLE.get(),
+                WORLD_HANG_DETECTOR_ENABLE.get(),
+                MEMORY_LEAK_MONITOR_ENABLE.get(),
+                DEADLOCK_DETECTOR_ENABLE.get(),
+                UNUSED_CONFIG_SCANNER_ENABLE.get(),
                 WORLD_AUTO_SCAN_ON_START.get(),
                 snapshotModToggleValues()
         );

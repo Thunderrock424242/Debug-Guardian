@@ -20,11 +20,19 @@ public class Watchdog {
     private static ScheduledFuture<?> scheduledTask;
 
     public static synchronized void start() {
+        if (!DebugConfig.get().watchdogEnable) {
+            stop();
+            return;
+        }
         ensureExecutor();
         reschedule();
     }
 
     public static synchronized void reloadFromConfig() {
+        if (!DebugConfig.get().watchdogEnable) {
+            stop();
+            return;
+        }
         ensureExecutor();
         reschedule();
     }

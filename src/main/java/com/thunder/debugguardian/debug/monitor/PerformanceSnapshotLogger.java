@@ -73,15 +73,20 @@ public class PerformanceSnapshotLogger {
     }
 
     private void captureSystemSample() {
+        boolean serverHasTicks = serverSamples.hasTickSamples();
+        boolean clientHasTicks = clientSamples.hasTickSamples();
+        if (!serverHasTicks && !clientHasTicks) {
+            return;
+        }
         double cpuLoad = osBean.getProcessCpuLoad();
-        double used = memoryMXBean.getHeapMemoryUsage().getUsed();
-        double max = memoryMXBean.getHeapMemoryUsage().getMax();
-        double memUsage = max > 0 ? used / max : Double.NaN;
-        if (serverSamples.hasTickSamples()) {
+        var usage = memoryMXBean.getHeapMemoryUsage();
+        double max = usage.getMax();
+        double memUsage = max > 0 ? usage.getUsed() / max : Double.NaN;
+        if (serverHasTicks) {
             serverSamples.recordCpuSample(cpuLoad);
             serverSamples.recordMemorySample(memUsage);
         }
-        if (clientSamples.hasTickSamples()) {
+        if (clientHasTicks) {
             clientSamples.recordCpuSample(cpuLoad);
             clientSamples.recordMemorySample(memUsage);
         }
@@ -136,7 +141,7 @@ public class PerformanceSnapshotLogger {
 
     private static class SampleAccumulator {
         private final String side;
-        private Instant lastTick = Instant.now();
+        private long lastTickNanos = System.nanoTime();
         private long tickSamples;
         private long fpsSamples;
         private long fpsTotal;
@@ -154,9 +159,9 @@ public class PerformanceSnapshotLogger {
         }
 
         private void recordTick() {
-            Instant now = Instant.now();
-            long ms = java.time.Duration.between(lastTick, now).toMillis();
-            lastTick = now;
+            long now = System.nanoTime();
+            long ms = TimeUnit.NANOSECONDS.toMillis(now - lastTickNanos);
+            lastTickNanos = now;
             tickSamples++;
             long threshold = Math.max(1L, DebugConfig.get().performanceTickThresholdMs);
             if (ms > threshold) {
