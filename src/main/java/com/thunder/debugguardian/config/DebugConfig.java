@@ -69,7 +69,7 @@ public class DebugConfig {
     // Watchdog Settings
     public static final ModConfigSpec.BooleanValue WATCHDOG_ENABLE = BUILDER
             .comment("Enable the watchdog resource monitor")
-            .define("monitoring.watchdog.enable", false);
+            .define("monitoring.watchdog.enable", true);
 
     public static final ModConfigSpec.LongValue WATCHDOG_MEMORY_CAP_MB = BUILDER
             .comment("Heap usage (in MB) that triggers a watchdog warning")
@@ -91,12 +91,12 @@ public class DebugConfig {
     // NeoForge Version Checker Settings
     public static final ModConfigSpec.BooleanValue DISABLE_NEOFORGE_VERSION_CHECK = BUILDER
             .comment("Disable the NeoForge version checker globally for all mods in this instance")
-            .define("neoforge.disableVersionCheck", false);
+            .define("neoforge.disableVersionCheck", true);
 
     // Live Log Monitor Settings
     public static final ModConfigSpec.BooleanValue LOGGING_ENABLE_LIVE = BUILDER
             .comment("Enable real-time in-game log monitoring and notifications")
-            .define("logging.enableLiveMonitor", false);
+            .define("logging.enableLiveMonitor", true);
 
     // AI Log Analyzer Settings
     public static final ModConfigSpec.ConfigValue<String> LOGGING_AI_SERVICE_API_KEY = BUILDER
@@ -137,7 +137,7 @@ public class DebugConfig {
 
     public static final ModConfigSpec.BooleanValue LOADING_HANG_DETECTOR_ENABLE = BUILDER
             .comment("Enable client-side loading hang detection")
-            .define("debug.loadingHangDetector.enable", false);
+            .define("debug.loadingHangDetector.enable", true);
 
     public static final ModConfigSpec.BooleanValue PERFORMANCE_MONITOR_ENABLE = BUILDER
             .comment("Enable tick and memory performance monitoring")
@@ -153,7 +153,7 @@ public class DebugConfig {
 
     public static final ModConfigSpec.BooleanValue WORLD_GEN_FREEZE_ENABLE = BUILDER
             .comment("Enable world generation freeze detection")
-            .define("debug.worldGenFreezeDetector.enable", false);
+            .define("debug.worldGenFreezeDetector.enable", true);
 
     public static final ModConfigSpec.BooleanValue THREAD_USAGE_MONITOR_ENABLE = BUILDER
             .comment("Enable thread usage monitoring")
@@ -165,19 +165,19 @@ public class DebugConfig {
 
     public static final ModConfigSpec.BooleanValue WORLD_HANG_DETECTOR_ENABLE = BUILDER
             .comment("Enable world hang detection")
-            .define("debug.worldHangDetector.enable", false);
+            .define("debug.worldHangDetector.enable", true);
 
     public static final ModConfigSpec.BooleanValue MEMORY_LEAK_MONITOR_ENABLE = BUILDER
             .comment("Enable memory leak monitoring")
-            .define("monitoring.memoryLeak.enable", false);
+            .define("monitoring.memoryLeak.enable", true);
 
     public static final ModConfigSpec.BooleanValue DEADLOCK_DETECTOR_ENABLE = BUILDER
             .comment("Enable JVM deadlock detection")
-            .define("debug.deadlockDetector.enable", false);
+            .define("debug.deadlockDetector.enable", true);
 
     public static final ModConfigSpec.BooleanValue UNUSED_CONFIG_SCANNER_ENABLE = BUILDER
             .comment("Enable unused config scanner on server start")
-            .define("debug.unusedConfigScanner.enable", false);
+            .define("debug.unusedConfigScanner.enable", true);
 
     // World Integrity Monitoring Settings
     public static final ModConfigSpec.BooleanValue WORLD_AUTO_SCAN_ON_START = BUILDER
@@ -210,7 +210,6 @@ public class DebugConfig {
             false,
             false,
             true,
-            false,
             false,
             false,
             false,
